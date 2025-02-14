@@ -26,14 +26,16 @@
           </thead>
           <tbody>
           <tr v-for="product in filteredProducts" :key="product.id" class="border-b hover:bg-gray-100 transition">
+<!--
             <td class="px-6 py-3">{{ product.id }}</td>
+-->
             <td class="px-6 py-3">{{ product.name }}</td>
             <td class="px-6 py-3 font-bold">${{ product.price }}</td>
             <td class="px-6 py-3">{{ product.stock }}</td>
             <td class="px-6 py-3">
               <button @click="addToCart(product)" class="btn-add">
                 🛒 Add to Cart
-              </button>
+              </button>u
             </td>
           </tr>
           </tbody>
