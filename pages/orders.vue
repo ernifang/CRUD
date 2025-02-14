@@ -10,7 +10,6 @@
         <table class="min-w-full border-collapse">
           <thead>
           <tr class="bg-indigo-600 text-white">
-            <th class="px-6 py-3 text-left">Order ID</th>
             <th class="px-6 py-3 text-left">Customer</th>
             <th class="px-6 py-3 text-left">Product ID</th>
             <th class="px-6 py-3 text-left">Product Name</th>
@@ -21,7 +20,6 @@
           </thead>
           <tbody>
           <tr v-for="order in orders" :key="order.id" class="border-b hover:bg-gray-100 transition">
-            <td class="px-6 py-3">{{ order.id }}</td>
             <td class="px-6 py-3">{{ order.customer }}</td>
             <td class="px-6 py-3">{{ order.product.id }}</td>
             <td class="px-6 py-3">{{ order.product.name }}</td>
