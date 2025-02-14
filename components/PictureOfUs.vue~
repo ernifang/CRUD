@@ -1,0 +1,103 @@
+<template>
+  <div class="container">
+    <div class="image-container">
+      <div class="gradient-overlay"></div>
+      <img :src="currentImage" alt="Page Image" class="image"/>
+      <div class="text-overlay">
+        <h1>{{ pageTitle }}</h1> <!-- Menampilkan judul yang relevan -->
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import {ref, watch} from 'vue';
+import test_image from '@/assets/images/Group 41.png';
+
+// Props untuk menerima halaman aktif
+const props = defineProps({
+  activePage: {
+    type: String,
+    required: true
+  }
+});
+
+// Gambar per halaman
+const images = {
+  Home: test_image,
+  "Who We Are": test_image,
+  "Our Portofolio": test_image,
+  Services: test_image,
+  Testimonial: test_image,
+  Blog: test_image,
+  "Contact Us": test_image,
+  FAQ: test_image,
+};
+
+// Judul per halaman
+const titles = {
+  Home: 'Hi Nice to Meet You',
+  "Who We Are": 'Hi Nice to Meet You',
+  "Our Portofolio": 'Peep Our Work!',
+  Services: 'What We Bring to the Table!',
+  Testimonial: 'What They’re Saying About Us!',
+  Blog: 'Latest Vibes & Insights',
+  "Contact Us": 'Call Me, Baby',
+  FAQ: 'You Ask, We Got You!',
+};
+
+// State untuk gambar dan judul
+const currentImage = ref(images[props.activePage]);
+const pageTitle = ref(titles[props.activePage]);
+
+// Watch untuk perubahan props dan update gambar serta judul sesuai halaman aktif
+watch(() => props.activePage, (newPage) => {
+  currentImage.value = images[newPage];
+  pageTitle.value = titles[newPage];
+});
+</script>
+
+<style scoped>
+.container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+.image-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Menampilkan seluruh gambar tanpa terpotong */
+  background-color: black; /* Latar belakang hitam untuk ruang kosong */
+  justify-content: flex-end;
+  align-items: flex-end;
+}
+
+.gradient-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0));
+  z-index: 1;
+}
+
+.text-overlay {
+  position: absolute;
+  top: 50%;
+  left: 5%;
+  transform: translateY(-50%);
+  color: white;
+  font-family: 'Irish Grover', cursive;
+  font-size: 3rem;
+  white-space: nowrap;
+  z-index: 2;
+}
+</style>

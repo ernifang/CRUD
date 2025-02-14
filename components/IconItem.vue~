@@ -1,0 +1,76 @@
+<template>
+  <div
+      :class="{ selected: isSelected }"
+      class="icon-item"
+      @click="toggleSelect"
+  >
+    <div class="image-container">
+      <img :alt="icon.alt" :src="icon.img" /> <!-- Menggunakan prop icon.img langsung -->
+    </div>
+    <hr class="separator" />
+    <p class="icon-name">{{ icon.name }}</p>
+  </div>
+</template>
+
+<script setup>
+const props = defineProps({
+  icon: Object,       // Mengambil data icon sebagai prop
+  isSelected: Boolean // Apakah icon dipilih
+});
+
+const emit = defineEmits(['toggle-select']);
+
+const toggleSelect = () => {
+  emit('toggle-select'); // Emit event saat icon diklik
+};
+</script>
+
+<style scoped>
+.icon-item {
+  //background: white;
+  border-radius: 8px;
+  padding: 5px;
+  text-align: center;
+  box-shadow: 0px 6px 30px rgba(162, 144, 91,100);
+  width: 17rem; /* Ukuran relatif terhadap ukuran font root */
+  height: 17rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  cursor: pointer;
+  //background-color: #e60023;
+}
+
+.icon-item.selected {
+  border: 2px solid #29ABE1;
+}
+
+.image-container {
+  width: 100%;
+  height: 100%;
+  padding-top: 100%; /* Menjaga rasio 1:1 */
+  position: relative;
+}
+
+.image-container img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  //width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+
+.icon-name {
+  font-family: 'Inter', sans-serif;
+  font-weight: bold;
+  font-size: 14px;
+  color: #000000;
+  margin-top: 5px;
+  min-height: 40px;
+  text-align: center;
+  overflow-wrap: break-word;
+}
+</style>

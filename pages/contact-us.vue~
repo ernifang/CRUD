@@ -1,0 +1,372 @@
+<template>
+  <div v-if="!isClosed" class="container">
+    <transition name="slide-up-down">
+      <div v-show="!isMinimized">
+        <HeaderWindow
+            :activePage="'Contact Us'"
+            :isMinimized="isMinimized"
+            @close="handleClose"
+            @maximize="handleMaximize"
+            @minimize="handleMinimize"
+        />
+      </div>
+    </transition>
+
+    <transition name="slide-up-down">
+      <div v-show="!isMinimized" class="contact-section">
+        <!-- Kartu Kontak untuk Telepon -->
+<!--        <div class="contact-card phone-card">
+          <div class="card-header-not-email">
+            <img alt="Phone Icon" class="icon" src="/assets/icon/phone_black.png" @click="handleIconClick('phone', 0)"/>
+            <img alt="Message Icon" class="icon" src="/assets/icon/message_black.png"
+                 @click="handleIconClick('message', 1)"/>
+            <img alt="WhatsApp Icon" class="icon" src="/assets/icon/wa_black.png"
+                 @click="handleIconClick('whatsapp', 2)"/>
+          </div>
+
+          <div class="card-body">
+            <p class="contact-name">Michael Lesmana</p>
+            <p class="contact-number">+62 812 8312 0704</p>
+            <p class="contact-name">Erni</p>
+            <p class="contact-number">+62 896 6570 8049</p>
+          </div>
+        </div>-->
+
+        <!-- Kartu Kontak untuk Email -->
+        <div class="contact-card email-card">
+          <div class="card-header">
+            <img alt="Email Icon" class="icon" src="/assets/icon/mail_black.png" @click="handleIconClick('email', 3)"/>
+          </div>
+          <div class="card-body">
+            <p class="contact-name">Michael Lesmana</p>
+            <p class="contact-email">michaellesmana39@gmail.com</p>
+            <p class="contact-name">Erni</p>
+            <p class="contact-email">ernifang0563@gmail.com</p>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- Modal untuk memilih nomor telepon -->
+    <transition name="fade">
+      <div v-if="showModal" class="modal-overlay">
+        <div class="modal-content">
+          <h3>Pilih {{ selectedIdx.value === 3 ? 'Email' : 'Nomor Telepon' }}</h3>
+          <!-- Jika nomor telepon -->
+          <button v-if="selectedIdx.value !== 3" @click="selectNumber(numbers[0])">{{ numbers[0] }} - Michael Lesmana
+          </button>
+          <button v-if="selectedIdx.value !== 3" @click="selectNumber(numbers[1])">{{ numbers[1] }} - Erni Fang</button>
+
+          <!-- Jika email -->
+          <button v-if="selectedIdx.value === 3" @click="selectNumber(numbers[0])">{{ numbers[0] }} - Michael Lesmana
+          </button>
+          <button v-if="selectedIdx.value === 3" @click="selectNumber(numbers[1])">{{ numbers[1] }} - Erni Fang</button>
+          <button @click="closeModal">Cancel</button>
+        </div>
+      </div>
+    </transition>
+  </div>
+
+  <!-- Pesan "Aplikasi Ditutup" -->
+  <div v-if="isClosed" class="closed-message">
+    <p>This application has been closed!</p>
+    <p>Press F5 on your keyboard or click the refresh button in your browser.</p>
+  </div>
+
+  <!-- Title Bar saja yang muncul ketika di-minimize -->
+  <div v-if="isMinimized" class="minimized-header">
+    <HeaderWindow
+        :isMinimized="isMinimized"
+        @close="handleClose"
+        @maximize="handleMaximize"
+        @minimize="handleMinimize"
+    />
+  </div>
+</template>
+
+<script setup>
+import {ref} from 'vue';
+import HeaderWindow from '@/components/HeaderWindow.vue';
+import magnifier from 'assets/icon/magnifier_black.png';
+import phone from 'assets/icon/phone_black.png';
+import message from 'assets/icon/message_black.png';
+import whatsapp from 'assets/icon/wa_black.png';
+import user from 'assets/icon/user_black.png';
+import book from 'assets/icon/book_black.png';
+import road from 'assets/icon/road_black.png';
+import customer_support from 'assets/icon/customer_support_black.png';
+
+// State untuk kontrol tampilan aplikasi
+const isClosed = ref(false);
+const isMinimized = ref(false); // State untuk minimize
+
+// Data untuk setiap kartu
+const cards = ref([
+  {
+    front: {title: 'Who We Are ?', icon: magnifier},
+    back: {title: '', description: 'Michael\n&\nErni', fontSize: '30px'}
+  },
+  {
+    front: {title: 'Call Me', icon: phone},
+    back: {
+      title: '',
+      description: '+62 812 8312 0704 & +62 896 6570 8049',
+      fontSize: '22px',
+      icons: [phone, message, whatsapp]
+    }
+  },
+  {
+    front: {title: 'Client Testimony', icon: user},
+    back: {
+      title: '',
+      description: 'Curious for the Tea? Check out the\nTestimonial page up top in the Nav Bar!\n☕️👀',
+      fontSize: '20px'
+    }
+  },
+  {
+    front: {title: 'Our Expertise', icon: book},
+    back: {
+      title: '',
+      description: 'We have experience in various fields\nsuch as web development, \nAI integration,\ncloud computing,\nand mobile applications.',
+      fontSize: '18px'
+    }
+  },
+  {
+    front: {title: 'Our Approach', icon: road},
+    back: {
+      title: '',
+      description: 'We always prioritize client needs,\nprovide tailored solutions,\nand\ndeliver high-quality results.',
+      fontSize: '18px'
+    }
+  },
+  {
+    front: {title: 'Our Commitment', icon: customer_support},
+    back: {
+      title: 'Commitment',
+      description: 'Our commitment is to provide\nthe best service,\nresponsive support,\nand maintain\nlong-term relationships\nwith our clients.',
+      fontSize: '18px'
+    }
+  }
+]);
+
+// State untuk modal dan data nomor telepon
+const showModal = ref(false);
+const numbers = ref([]);
+const selectedIdx = ref(0); // Indeks dari ikon yang diklik
+const flippedCards = ref(cards.value.map(() => false));
+
+// Fungsi untuk membalik kartu
+const flipCard = (index) => {
+  flippedCards.value[index] = !flippedCards.value[index];
+};
+
+// Fungsi untuk menangani klik pada ikon dan menampilkan modal
+const handleIconClick = (type, idx) => {
+  selectedIdx.value = idx; // Menyimpan indeks ikon yang diklik
+
+  // Jika tipe ikon adalah telepon atau pesan
+  if (type === 'phone' || type === 'message' || type === 'whatsapp') {
+    numbers.value = ['+62 812 8312 0704', '+62 896 6570 8049']; // Data nomor telepon yang tersedia
+    showModal.value = true; // Tampilkan modal untuk memilih nomor telepon
+  }
+
+  // Jika tipe ikon adalah email
+  if (type === 'email') {
+    numbers.value = ['michaellesmana39@gmail.com', 'ernifang0563@gmail.com']; // Data email yang tersedia
+    showModal.value = true; // Tampilkan modal untuk memilih email
+  }
+};
+
+
+// Fungsi untuk menutup modal
+const closeModal = () => {
+  showModal.value = false;
+};
+
+// Fungsi untuk memilih nomor dan melakukan tindakan sesuai ikon yang diklik
+const selectNumber = (selectedNumber) => {
+  switch (selectedIdx.value) {
+    case 0: // Phone
+      window.location.href = `tel:${selectedNumber.replace(/ /g, '')}`;
+      break;
+    case 1: // Message
+      window.location.href = `sms:${selectedNumber.replace(/ /g, '')}`;
+      break;
+    case 2: // WhatsApp
+      window.location.href = `https://wa.me/${selectedNumber.replace(/ /g, '')}`;
+      break;
+    case 3: // Email
+      window.location.href = `mailto:${selectedNumber}`;
+      break;
+  }
+  closeModal();
+};
+
+// Fungsi untuk handle minimize, maximize, dan close
+const handleMinimize = () => {
+  isMinimized.value = !isMinimized.value; // Toggle antara minimize dan restore
+};
+
+const handleMaximize = () => {
+  const docElement = document.documentElement;
+  if (!document.fullscreenElement) {
+    docElement.requestFullscreen().catch((err) => console.error(`Gagal masuk ke mode fullscreen: ${err.message}`));
+  } else {
+    document.exitFullscreen().catch((err) => console.error(`Gagal keluar dari mode fullscreen: ${err.message}`));
+  }
+};
+
+const handleClose = () => {
+  isClosed.value = true;
+};
+</script>
+
+<style scoped>
+.container {
+  background-color: #BBA996;
+  text-align: center;
+  min-width: 100vw;
+  min-height: 100vh;
+}
+
+.contact-section {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 7vh;
+}
+
+.contact-card {
+  background-color: #EEE0C8;
+  border-radius: 24px;
+  padding: 20px;
+  width: 320px;
+  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  margin: 0 10px;
+  position: relative; /* Agar card-header dapat diatur posisinya */
+}
+
+.card-header {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #EEE0C8;
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.card-header-not-email {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #EEE0C8;
+  border-radius: 50px;
+  height: 80px;
+  box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  gap: 50px;
+  padding: 0 2vw;
+  justify-content: center;
+  align-items: center;
+}
+
+.icon {
+  width: 24px; /* Ukuran ikon disesuaikan agar lebih kecil dan rapi */
+  height: 24px;
+  cursor: pointer;
+}
+
+
+.card-body {
+  font-family: 'Irish Grover', cursive;
+  padding-top: 3vh;
+}
+
+.contact-name {
+  font-size: 22px; /* Font yang lebih besar untuk nama */
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #3D2914;
+}
+
+.contact-number, .contact-email {
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: #3D2914;
+}
+
+/* Gaya untuk pesan aplikasi ditutup */
+.closed-message {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  text-align: center;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 20px;
+  color: #333;
+}
+
+.minimized-header {
+  position: fixed;
+  bottom: 0;
+  width: 100vw;
+}
+
+/* Animasi slide up dan down */
+.slide-up-down-enter-active, .slide-up-down-leave-active {
+  transition: all 0.5s ease;
+}
+
+.slide-up-down-enter-from, .slide-up-down-leave-to {
+  transform: translateY(100%);
+}
+
+/* Gaya untuk modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.modal-content h3 {
+  margin-bottom: 15px;
+}
+
+.modal-content button {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 10px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.modal-content button:last-child {
+  background-color: #d9534f;
+  color: white;
+}
+</style>

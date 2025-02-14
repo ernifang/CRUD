@@ -1,0 +1,68 @@
+<template>
+  <nav class="navbar">
+    <ul class="navbar-menu">
+      <li v-for="(item, index) in menuItems" :key="index" class="navbar-item">
+        <a :class="{ active: item.name === activePage }" :href="item.link">{{ item.name }}</a>
+      </li>
+    </ul>
+  </nav>
+</template>
+
+<script setup>
+// Mengimpor ref dari Vue
+import {ref} from 'vue';
+
+// Props untuk menerima halaman aktif
+const props = defineProps({
+  activePage: {
+    type: String,
+    required: true
+  }
+});
+
+// Daftar item navbar
+const menuItems = ref([
+  {name: 'Home', link: '/', isActive: false},
+  {name: 'Who We Are', link: '/who-we-are', isActive: false},
+  {name: 'Our Portfolio', link: '/our-portfolio', isActive: false},
+  {name: 'Services', link: '/services', isActive: false},
+  {name: 'Testimonial', link: '/testimonial', isActive: false},
+  {name: 'Blog', link: '/blog', isActive: false},
+  {name: 'Contact Us', link: '/contact-us', isActive: false},
+  {name: 'FAQ', link: '/faq', isActive: false}
+]);
+
+</script>
+
+<style scoped>
+.navbar {
+  background-color: #2F353A;
+  padding: 10px 0;
+}
+
+.navbar-menu {
+  list-style: none;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+}
+
+.navbar-item a {
+  font-family: 'Irish Grover', cursive;
+  font-size: 18px;
+  text-decoration: none;
+  color: #fff;
+  padding: 10px;
+  transition: color 0.3s ease;
+}
+
+.navbar-item a.active {
+  color: #C8926C;
+}
+
+.navbar-item a:hover {
+  color: #C8926C;
+}
+</style>

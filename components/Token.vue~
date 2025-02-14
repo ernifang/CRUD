@@ -1,0 +1,177 @@
+<template>
+  <div :class="['token-popup', popupPosition]" :style="popupStyles" @contextmenu.prevent>
+    <div class="token-content">
+      <div class="token-title">
+        <img :src="iconSrc" alt="Token Icon"/>
+        <h3>{{ title }}</h3>
+      </div>
+      <p>{{ description }}</p>
+      <!-- Hanya tampilkan elemen timer jika `time` tidak kosong -->
+      <div v-if="title === 'Silver Token'" class="timer">{{ time }}</div>
+      <NuxtLink to="/pricing-plans">
+        <button v-if="title === 'Gold Token'" class="buy-button">Buy Here</button>
+      </NuxtLink>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import {ref, watch, computed, onMounted, onUnmounted} from 'vue';
+import goldTokenImage from '@/assets/icon/gold_token.png';
+import silverTokenImage from '@/assets/icon/silver_token.png';
+import Shared_variables_ro from "~/config/shared_variables_ro.js";
+
+const popupStyles = ref({});
+
+const props = defineProps({
+  title: String,
+  description: String,
+  time: String,
+  isLoggedIn: Boolean, // Tambahkan props untuk status login
+});
+
+const iconSrc = computed(() => {
+  return props.title === 'Gold Token' ? goldTokenImage : silverTokenImage;
+});
+
+const popupPosition = computed(() => {
+  return props.title === 'Gold Token' ? 'popup-gold' : 'popup-silver';
+});
+
+const updatePopupPosition = () => {
+  const isLoggedIn = localStorage.getItem('isLoggedIn'); // Mendapatkan status login dari localStorage
+  if (Shared_variables_ro.isDevelopment) {
+    console.log("Updating popup position. isLoggedIn:" + isLoggedIn);
+  }
+  if (isLoggedIn == 'true') {
+    popupStyles.value = {
+      right: '85px',
+      left: 'unset',
+      transform: 'none',
+      top: '56px',
+      '--before-left': '150px', // Gaya khusus untuk :before
+      '--before-top': '-20px',
+      '--before-border-color': '#363737',
+    };
+  } else {
+    popupStyles.value = {
+      right: '-6px',
+      left: 'unset',
+      transform: 'none',
+      top: '56px',
+      '--before-left': '120px', // Gaya khusus untuk :before
+      '--before-top': '-20px',
+      '--before-border-color': '#363737',
+    };
+  }
+};
+
+onMounted(() => {
+  updatePopupPosition();
+
+  // Listener untuk perubahan login
+  window.addEventListener('login-status-changed', updatePopupPosition);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('login-status-changed', updatePopupPosition);
+});
+</script>
+
+<style scoped>
+/* Custom positioning based on screen size */
+/*@media (max-width: 768px) {
+  .token-popup {
+    width: 90%; !* Lebar lebih kecil untuk layar kecil *!
+    right: 5%; !* Tetap berada di tengah pada layar kecil *!
+  }
+}*/
+.token-popup {
+  position: fixed; /* Menggunakan fixed untuk posisi relatif terhadap viewport */
+  background-color: #363737;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  //width: 20vw; /* Menggunakan vw agar lebar popup relatif terhadap lebar layar */
+  max-width: 300px; /* Setel batas lebar maksimal untuk menghindari popup terlalu lebar */
+  z-index: 9999;
+  color: white;
+  text-align: center;
+}
+
+.popup-gold:before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: -20px;
+  width: 0;
+  height: 0;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-bottom: 20px solid #363737;
+  border-radius: 50% 50% 0 0;
+}
+
+.popup-silver:before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 120px;
+  width: 0;
+  height: 0;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-bottom: 20px solid #363737;
+  border-radius: 50% 50% 0 0;
+}
+
+.token-content {
+  text-align: center;
+  color: white;
+}
+
+.token-title {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.token-title img {
+  width: 40px;
+  height: 40px;
+  margin-right: 10px;
+}
+
+.token-title h3 {
+  color: #fff;
+  font-size: 18px;
+}
+
+.token-title p {
+  color: #fff;
+  font-size: 18px;
+}
+
+.timer {
+  margin-top: 10px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.buy-button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #EA0A8C;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.buy-button:hover {
+  background-color: #d20a7c;
+}
+</style>

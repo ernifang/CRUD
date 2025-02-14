@@ -1,0 +1,284 @@
+<template>
+  <div @contextmenu.prevent>
+    <Navbar :isAdmin="false" :isLoggedIn="isUserLoggedIn"/>
+
+    <div class="body-section">
+      <LoginContainer class="box-container">
+        <h1 id="title">CHOOSE A BASE AS YOU LIKE!</h1>
+        <div class="product-grid">
+          <ProductItem
+              v-for="(product, index) in products"
+              :key="product.product_id"
+              :isSelected="selectedProducts.includes(index)"
+              :product="product"
+              @toggle-select="selectProduct(index, product)"
+          />
+        </div>
+        <button class="next-button" @click="goToNext">Next >></button>
+        <LoadingOverlay :isVisible="isLoading" loadingText="Loading, Please Wait..."/>
+      </LoginContainer>
+    </div>
+
+    <Footer/>
+  </div>
+</template>
+
+<script setup>
+import {onBeforeUnmount, onMounted, ref} from 'vue';
+import {useRouter} from 'vue-router';
+import ProductItem from '~/components/ProductItem.vue';
+import Navbar from '~/components/Navbar.vue';
+import Footer from '~/components/Footer.vue';
+import LoginContainer from '~/components/BoxContainer.vue';
+import {useNuxtApp} from "#app";
+import SharedVariables from "~/config/shared_variables_ro.js";
+import LoadingOverlay from "~/components/LoadingOverlay.vue";
+
+const showPopup = ref(false);
+const isLoading = ref(false);
+
+const nuxtApp = useNuxtApp();
+const isUserLoggedIn = ref(false);
+
+const {$firebase} = useNuxtApp();
+
+const selectedProducts = ref([]); // Array untuk menyimpan indeks produk yang dipilih
+const selectedProductDetails = ref([]); // Array untuk menyimpan detail produk yang dipilih
+const products = ref([]);
+const router = useRouter();
+
+const analytics = nuxtApp.$firebase.analytics;
+const logEvent = nuxtApp.$firebase.logEvent;
+
+let startTime = Date.now(); // Untuk menyimpan waktu mulai
+const pageName = 'base-product-layout-sample.vue'; // Nama halaman yang sedang dilihat
+
+onMounted(async () => {
+  SharedVariables.compareAndHandleVersion();
+
+  isLoading.value = true;
+
+  await SharedVariables.clearEncryptedData();
+  try {
+    await nuxtApp.$redirectIfAdminLoggedIn();
+    isUserLoggedIn.value = useNuxtApp().$checkUserUid();
+
+    const productCollection = $firebase.collection($firebase.db, 'product');
+    const productSnapshot = await $firebase.getDocs(productCollection);
+
+    products.value = productSnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter(product => !product.id.includes('prototype'))
+        .filter(product => !product.product_name.startsWith("~"))
+        .filter(product => product.is_hidden === false);
+  } catch (error) {
+    if (SharedVariables.isDevelopment) console.error("Error during onMounted:", error);
+
+    const errMessage = 'Error during onMounted';
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/base-product-layout-sample.vue",
+      whatFunction: "onMounted"
+    });
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+onBeforeUnmount(() => {
+  try {
+    if (analytics && logEvent) {
+      const endTime = Date.now(); // Simpan waktu saat pengguna meninggalkan halaman
+      const duration = (endTime - startTime) / 1000; // Hitung durasi dalam detik
+
+      // Log event ke Firebase Analytics dengan durasi pengguna di halaman ini
+      logEvent(analytics, pageName, {
+        duration: duration // Durasi dalam detik
+      });
+    }
+  } catch (error) {
+    if (SharedVariables.isDevelopment) console.error("Error during onBeforeUnmount:", error);
+
+    const errMessage = 'Error during onBeforeUnmount';
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/base-product-layout-sample.vue",
+      whatFunction: "onBeforeUnmount"
+    });
+  }
+});
+
+const selectProduct = (index, product) => {
+  try {
+    const productIndex = selectedProducts.value.indexOf(index);
+
+    if (productIndex === -1) {
+      // Tambahkan produk yang dipilih
+      selectedProducts.value.push(index);
+      selectedProductDetails.value.push({
+        name: product.product_name,
+        image: product.product_picture,
+        price: product.product_price,
+        id_printful: product.idprintful,
+        id_product: product.product_id
+      });
+    } else {
+      // Hapus produk dari pilihan jika sudah dipilih sebelumnya
+      selectedProducts.value.splice(productIndex, 1);
+      selectedProductDetails.value = selectedProductDetails.value.filter(
+          (prod) => prod.name !== product.product_name
+      );
+    }
+  } catch (error) {
+    if (SharedVariables.isDevelopment) console.error("Error in selectProduct:", error);
+
+    const errMessage = "Error selecting product";
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/base-product-layout-sample.vue",
+      whatFunction: "selectProduct"
+    });
+  }
+};
+
+// Simpan data ke localStorage dan pindah ke halaman berikutnya
+const goToNext = () => {
+  if (selectedProductDetails.value.length > 0) {
+    localStorage.setItem('selectedProducts', JSON.stringify(selectedProductDetails.value)); // Simpan array produk ke localStorage
+    router.push('/ai/ai-text-to-art'); // Pindah ke halaman berikutnya
+
+
+  } else {
+    alert("Silakan pilih setidaknya satu produk.");
+  }
+};
+
+// Mengisi ulang produk untuk menghindari ruang kosong
+const fillEmptySpace = () => {
+  const columnCount = Math.floor(1200 / 250); // 1200px adalah max-width grid, 250px adalah min lebar item
+  const totalProducts = products.value.length;
+
+  const remainder = totalProducts % columnCount;
+  if (remainder > 0) {
+    const additionalItems = columnCount - remainder;
+    const duplicatedItems = products.value.slice(0, additionalItems);
+    products.value.push(...duplicatedItems);
+  }
+};
+</script>
+
+<style scoped>
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); /* Menggunakan auto-fit untuk mengisi ruang kosong */
+  gap: 15px 2px;
+  max-width: 100%; /* Membatasi lebar grid agar tetap dalam container */
+  //width: 100%; /* Memastikan grid mengisi lebar yang tersedia */
+  box-sizing: border-box; /* Memastikan padding termasuk dalam ukuran elemen */
+  position: relative;
+  margin: 30px;
+}
+
+
+.body-section {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  background-image: url('@/assets/images/background_for_page_ai.png');
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  //align-items: flex-start; /* Pastikan item mulai dari atas */
+  //overflow: auto; /* Membiarkan elemen yang melampaui batas menjadi scrollable */
+  padding: 20px; /* Memberikan sedikit padding */
+
+}
+
+
+.box-container {
+  //position: relative;
+  max-width: 90%;
+
+  width: 100%;
+  min-height: 100%; /* Agar tinggi container dapat mengikuti grid */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 30px;
+  padding: 20px;
+  //overflow: auto; /* Mengizinkan scrolling ketika konten terlalu banyak */
+}
+
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+#title {
+  font-family: 'Inter', sans-serif;
+  font-weight: bolder;
+  font-size: 32px;
+}
+
+.next-button {
+  background-color: #EA0A8C;
+  color: white;
+  padding: 10px 80px;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  margin-top: auto; /* Memastikan tombol berada di bagian bawah */
+  font-family: 'Inter', sans-serif;
+  font-weight: bold;
+  font-size: 24px;
+}
+
+.next-button:hover {
+  background-color: #e73370;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Warna abu-abu transparan */
+  //background-color: #8e117b;
+  z-index: 999; /* Pastikan di bawah popup */
+}
+
+.loading-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  //background-color: #29ABE1;
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  font-size: 18px;
+  text-align: center;
+  z-index: 9999; /* Lebih tinggi untuk memastikan popup berada di atas overlay */
+}
+</style>

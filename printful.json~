@@ -1,0 +1,257 @@
+{
+  "store_id": 14395543,
+  "external_id": "",
+  "shipping": "STANDARD",
+  "recipient": {
+    "name": "Michael Lesmana",
+    "company": "",
+    "address1": "Apartment Seasons City Tower B/12CKK, Jl. Prof. Dr. Latumenten No.33, Jembatan Besi, TamboraJakarta Barat 11320",
+    "address2": "",
+    "city": "Kota Administrasi Jakarta Barat",
+    "state_code": "JK",
+    "state_name": "DKI Jakarta",
+    "country_code": "ID",
+    "country_name": "Indonesia",
+    "zip": "11520",
+    "phone": "",
+    "email": "kazutorito007@gmail.com",
+    "tax_number": ""
+  },
+  "items": [
+    {
+      "id": 1,
+      "external_id": "item-0-1",
+      "variant_id": 5544,
+      "quantity": 500,
+      "price": "20",
+      "retail_price": "20",
+      "name": "4XL_#da0a1a",
+      "product": {
+        "variant_id": 5544,
+        "product_id": "146",
+        "image": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/b5dc40eadbfc0506a62b728ea249e846/unisex-heavy-blend-hoodie-red-front-670e56cfeb547.png",
+        "name": "4XL_#da0a1a"
+      },
+      "files": [
+        {
+          "type": "front",
+          "url": "https://storage.googleapis.com/generated-image-temp-saved/image_1728991506325_vixwgr.png",
+          "options": [],
+          "filename": "146_5544.png",
+          "visible": true,
+          "position": {
+            "area_width": 1024,
+            "area_height": 1024,
+            "width": 1024,
+            "height": 1024,
+            "top": 0,
+            "left": 0
+          }
+        }
+      ],
+      "options": [],
+      "sku": null,
+      "discontinued": false,
+      "out_of_stock": false
+    },
+    {
+      "id": 2,
+      "external_id": "item-0-2",
+      "variant_id": 5617,
+      "quantity": 200,
+      "price": "20",
+      "retail_price": "20",
+      "name": "5XL_#9b969c",
+      "product": {
+        "variant_id": 5617,
+        "product_id": "146",
+        "image": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/099ac3bcfee173e6ebb8ae60f65c0be2/unisex-heavy-blend-hoodie-sport-grey-front-670e56f461351.png",
+        "name": "5XL_#9b969c"
+      },
+      "files": [
+        {
+          "type": "front",
+          "url": "https://storage.googleapis.com/generated-image-temp-saved/image_1728991506325_vixwgr.png",
+          "options": [],
+          "filename": "146_5617.png",
+          "visible": true,
+          "position": {
+            "area_width": 1024,
+            "area_height": 1024,
+            "width": 1024,
+            "height": 1024,
+            "top": 0,
+            "left": 0
+          }
+        }
+      ],
+      "options": [],
+      "sku": null,
+      "discontinued": false,
+      "out_of_stock": false
+    },
+    {
+      "id": 3,
+      "external_id": "item-0-3",
+      "variant_id": 10852,
+      "quantity": 100,
+      "price": "20",
+      "retail_price": "20",
+      "name": "XL_#f3d4e3",
+      "product": {
+        "variant_id": 10852,
+        "product_id": "146",
+        "image": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/cbbc4ddc1c8aa7c4bdc7e93c2442de0c/unisex-heavy-blend-hoodie-light-pink-front-670e5734c35b6.png",
+        "name": "XL_#f3d4e3"
+      },
+      "files": [
+        {
+          "type": "front",
+          "url": "https://storage.googleapis.com/generated-image-temp-saved/image_1728991506325_vixwgr.png",
+          "options": [],
+          "filename": "146_10852.png",
+          "visible": true,
+          "position": {
+            "area_width": 1024,
+            "area_height": 1024,
+            "width": 1024,
+            "height": 1024,
+            "top": 0,
+            "left": 0
+          }
+        }
+      ],
+      "options": [],
+      "sku": null,
+      "discontinued": false,
+      "out_of_stock": false
+    },
+    {
+      "id": 1,
+      "external_id": "item-1-1",
+      "variant_id": 10458,
+      "quantity": 50,
+      "price": "20",
+      "retail_price": "20",
+      "name": "One size_#edcea5",
+      "product": {
+        "variant_id": 10458,
+        "product_id": "367",
+        "image": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/fdb7abde6fe2e87956f31308e7719b5f/eco-tote-bag-oyster-front-670e57544414c.png",
+        "name": "One size_#edcea5"
+      },
+      "files": [
+        {
+          "type": "front",
+          "url": "https://storage.googleapis.com/generated-image-temp-saved/image_1728991506325_vixwgr.png",
+          "options": [],
+          "filename": "367_10458.png",
+          "visible": true,
+          "position": {
+            "area_width": 1024,
+            "area_height": 1024,
+            "width": 1024,
+            "height": 1024,
+            "top": 0,
+            "left": 0
+          }
+        }
+      ],
+      "options": [],
+      "sku": null,
+      "discontinued": false,
+      "out_of_stock": false
+    },
+    {
+      "id": 2,
+      "external_id": "item-1-2",
+      "variant_id": 10457,
+      "quantity": 30,
+      "price": "20",
+      "retail_price": "20",
+      "name": "One size_#101010",
+      "product": {
+        "variant_id": 10457,
+        "product_id": "367",
+        "image": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/88bb211d1b4593d634cb464374e8e502/eco-tote-bag-black-front-670e579317134.png",
+        "name": "One size_#101010"
+      },
+      "files": [
+        {
+          "type": "front",
+          "url": "https://storage.googleapis.com/generated-image-temp-saved/image_1728991506325_vixwgr.png",
+          "options": [],
+          "filename": "367_10457.png",
+          "visible": true,
+          "position": {
+            "area_width": 1024,
+            "area_height": 1024,
+            "width": 1024,
+            "height": 1024,
+            "top": 0,
+            "left": 0
+          }
+        }
+      ],
+      "options": [],
+      "sku": null,
+      "discontinued": false,
+      "out_of_stock": false
+    },
+    {
+      "id": 1,
+      "external_id": "item-2-1",
+      "variant_id": 16586,
+      "quantity": 1,
+      "price": "20",
+      "retail_price": "20",
+      "name": "20 oz_#FFF",
+      "product": {
+        "variant_id": 16586,
+        "product_id": "19",
+        "image": "https://printful-upload.s3-accelerate.amazonaws.com/tmp/73953761cb40e7190c80efa6cc6a55ad/white-glossy-mug-white-20-oz-handle-on-right-670e57fa727a2.png",
+        "name": "20 oz_#FFF"
+      },
+      "files": [
+        {
+          "type": "default",
+          "url": "https://storage.googleapis.com/generated-image-temp-saved/image_1728991506325_vixwgr.png",
+          "options": [],
+          "filename": "19_16586.png",
+          "visible": true,
+          "position": {
+            "area_width": 1024,
+            "area_height": 1024,
+            "width": 1024,
+            "height": 1024,
+            "top": 0,
+            "left": 0
+          }
+        }
+      ],
+      "options": [],
+      "sku": null,
+      "discontinued": false,
+      "out_of_stock": false
+    }
+  ],
+  "retail_costs": {
+    "currency": "USD",
+    "subtotal": "17620",
+    "discount": "0",
+    "shipping": "891.99",
+    "tax": "0.00"
+  },
+  "gift": {
+    "subject": "To Michael Lesmana",
+    "message": "Have a nice day"
+  },
+  "packing_slip": {
+    "email": "weareblanx@gmail.com",
+    "phone": "+15623460961",
+    "message": "Thank you for choosing our product! Your support means everything to us. We hope it brings value to your life. If there's anything more we can do for you, feel free to reach out.",
+    "logo_url": "https://files.cdn.printful.com/branding/14395/14395543/1728553264.png",
+    "store_name": "BLANX",
+    "custom_order_id": "BLANX-20241015-7FMDE"
+  }
+}

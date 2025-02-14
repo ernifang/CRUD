@@ -1,0 +1,246 @@
+<template>
+  <div class="body-element">
+    <!-- Navbar -->
+    <Navbar :isAdmin="false" :isLoggedIn="isUserLoggedIn"/>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-content">
+        <h1 style="font-size: 48px; font-weight: bolder">HUMAN + AI DRIVEN, <br> CREATIVELY THRIVEN</h1>
+        <p style="font-size: 18px">A place where anyone can turn their imagination to reality, because everyone is a
+          creator! #Simplyimagine</p>
+      </div>
+    </section>
+
+    <!-- Earth Friendly Section -->
+    <section class="earth-friendly-section">
+      <h2 style="font-size: 36px; font-weight: bolder">OUR EARTH FRIENDLY PRINT-ON-DEMAND SOLUTION</h2>
+      <div class="icons-container">
+        <div v-for="(item, index) in earthFriendlyItems" :key="index" class="icon-box">
+          <img :src="item.image" alt="icon" style="margin: 50px 0"/>
+          <h3 style="font-size: 24px; font-weight: bold">{{ item.title }}</h3>
+          <p style="font-size: 18px">{{ item.description }}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Committed to Sustainability Section -->
+    <section class="sustainability-section">
+      <h2 style="font-size: 48px; font-weight: bolder">COMMITTED TO SUSTAINABILITY</h2>
+      <p style="font-size: 18px">We care about our artist community and our environmental impact. That means we're
+        actively working to make the world a better place. In our products, processes, office, and daily lives, we're
+        doing our part. We recycle, work paperless as often as possible, use refillable water bottles, donate unused
+        products and office supplies to reduce excess waste, and so much more. Eco-friendly, ethical, and socially
+        responsible practices are central to Threadless' culture.</p>
+    </section>
+
+    <!-- Premium Products Section -->
+    <section class="premium-products-section">
+      <h2 style="font-size: 48px; font-weight: bolder; margin-bottom: 17px">PREMIUM PRODUCTS, ETHICALLY SOURCED</h2>
+      <p style="font-size: 18px; margin-bottom: 264px">We're committed to working with partners who hold the highest
+        standards for safe, sustainable production. Our vendors are all certified by the Worldwide Responsible
+        Accredited Production (WRAP) Program. They're also affiliated with the Fair Labor Association (FLA). That means,
+        our partners actively work to reduce their environmental impact by decreasing energy use, water consumption,
+        wastewater production, and greenhouse gas emissions. The following WRAP principles are foundational to the
+        success of our vendors and the quality of our products.</p>
+      <div class="premium-icons-container">
+        <div v-for="(item, index) in premiumProducts" :key="index" class="premium-icon-box">
+          <img :src="item.image" alt="icon"/>
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.description }}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <Footer/>
+  </div>
+</template>
+
+<script setup>
+import {onBeforeUnmount, onMounted, ref} from 'vue';
+import Navbar from '@/components/Navbar.vue';
+import Footer from '@/components/Footer.vue';
+import SharedVariables from '~/config/shared_variables_ro.js';
+import {useNuxtApp, useRouter} from '#app';
+
+import plant from '@/assets/icon/plant.png'
+
+const isUserLoggedIn = ref(false);
+const nuxtApp = useNuxtApp();
+const router = useRouter();
+
+const analytics = nuxtApp.$firebase.analytics;
+const logEvent = nuxtApp.$firebase.logEvent;
+
+let startTime = Date.now(); // Untuk menyimpan waktu mulai
+const pageName = 'about-us.vue'; // Nama halaman yang sedang dilihat
+
+const earthFriendlyItems = ref([
+  {title: 'Carbon', image: plant, description: 'We care about our artist community and our environmental impact.'},
+  {title: 'Safety', image: plant, description: 'We care about our artist community and our environmental impact.'},
+  {title: 'Inks', image: plant, description: 'We care about our artist community and our environmental impact.'},
+]);
+
+const premiumProducts = ref([
+  {title: 'Carbon', image: plant, description: 'We care about our artist community and our environmental impact.'},
+  {title: 'Safety', image: plant, description: 'We care about our artist community and our environmental impact.'},
+  {title: 'Inks', image: plant, description: 'We care about our artist community and our environmental impact.'},
+  {title: 'Carbon', image: plant, description: 'We care about our artist community and our environmental impact.'},
+  {title: 'Safety', image: plant, description: 'We care about our artist community and our environmental impact.'},
+  {title: 'Inks', image: plant, description: 'We care about our artist community and our environmental impact.'},
+  {title: 'Carbon', image: plant, description: 'We care about our artist community and our environmental impact.'},
+  {title: 'Safety', image: plant, description: 'We care about our artist community and our environmental impact.'},
+  {title: 'Inks', image: plant, description: 'We care about our artist community and our environmental impact.'},
+]);
+
+onMounted(async () => {
+  try {
+    SharedVariables.compareAndHandleVersion();
+
+    // Check if preRegistrationEvent is true
+    if (SharedVariables.preRegistrationEvent) {
+      await router.push('/pre-registration-event');
+      return;
+    }
+
+    await nuxtApp.$redirectIfAdminLoggedIn();
+    isUserLoggedIn.value = nuxtApp.$checkUserUid();
+
+    SharedVariables.clearEncryptedData();
+  } catch (error) {
+    const errMessage = "Error during about-us page mounting: " + error;
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/about-us.vue",
+      whatFunction: "onMounted",
+    });
+  }
+});
+
+onBeforeUnmount(() => {
+  if (analytics && logEvent) {
+    const endTime = Date.now(); // Simpan waktu saat pengguna meninggalkan halaman
+    const duration = (endTime - startTime) / 1000; // Hitung durasi dalam detik
+
+    // Log event ke Firebase Analytics dengan durasi pengguna di halaman ini
+    logEvent(analytics, pageName, {
+      duration: duration // Durasi dalam detik
+    });
+  }
+});
+</script>
+
+<style scoped>
+.body-element {
+  font-family: "Inter", Helvetica;
+}
+
+/* Hero Section */
+/* Hero Section */
+.hero-section {
+  background-image: linear-gradient(to right, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0)), url('@/assets/images/human_ai_driven.png');
+  background-size: cover;
+  background-position: center;
+  height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.hero-content {
+  text-align: left;
+  color: white;
+  margin-left: 100px;
+}
+
+.hero-content h1 {
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+
+.hero-content p {
+  font-size: 16px;
+}
+
+/* Earth Friendly Section */
+.earth-friendly-section {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.icons-container {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.icon-box {
+  text-align: center;
+  max-width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-items: center;
+}
+
+.icon-box img {
+  width: 100px;
+  height: 100px;
+}
+
+/* Committed to Sustainability Section */
+/* Committed to Sustainability Section */
+.sustainability-section {
+  background-image: linear-gradient(to top, rgba(0, 0, 0, 1), rgba(0, 0, 0, 0)), url('@/assets/images/committed_to_sustainability.png');
+  background-size: cover;
+  background-position: center;
+  height: 1300px;
+  padding: 40px 20px;
+  background-color: #f0f0f0;
+  color: white;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end; /* Adjusted this line to move content to the bottom */
+}
+
+/* Premium Products Section */
+.premium-products-section {
+  background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 1)), url('@/assets/images/premium_product.png');
+  background-size: cover;
+  background-position: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: white;
+}
+
+.premium-icons-container {
+  display: grid; /* Ganti dari flex ke grid */
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Membuat kolom secara otomatis sesuai ukuran */
+  gap: 20px; /* Jarak antar item */
+  justify-content: center; /* Memastikan item berada di tengah */
+  padding: 20px; /* Memberikan padding */
+}
+
+.premium-icon-box {
+  text-align: center;
+  max-width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-items: center;
+}
+
+.premium-icon-box img {
+  width: 100px;
+  height: 100px;
+}
+</style>

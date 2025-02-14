@@ -1,0 +1,294 @@
+<template>
+  <div>
+    <Navbar :isAdmin="false" :isLoggedIn="isUserLoggedIn"/>
+    <LoginContainer class="box-container">
+      <div class="profile-container">
+        <div class="profile-layout">
+          <!-- Sidebar -->
+          <div class="sidebar">
+            <div class="user-info">
+              <img :src="profilePicture" alt="User Avatar"/>
+              <div class="user-details">
+                <h3>{{ fullName }}</h3>
+                <p>{{ userType }}</p>
+              </div>
+            </div>
+            <ul>
+              <li @click="changeComponent('ChangeProfile')">
+                <i class="fa fa-user"></i> Change Profile
+              </li>
+              <li @click="changeComponent('HistoryTransaction')">
+                <i class="fa fa-history"></i> History Transaction
+              </li>
+              <li @click="changeComponent('FAQ')">
+                <i class="fa fa-question-circle"></i> FAQ
+              </li>
+            </ul>
+          </div>
+
+          <!-- Konten Utama -->
+          <div class="content">
+            <component :is="componentsList[activeComponent]"/>
+          </div>
+
+        </div>
+      </div>
+    </LoginContainer>
+    <Footer/>
+  </div>
+</template>
+
+<script setup>
+import {onBeforeUnmount, onMounted, ref} from 'vue';
+import {useRouter} from 'vue-router';
+import {useNuxtApp} from "#app";
+import Navbar from '~/components/Navbar.vue';
+import Footer from '~/components/Footer.vue';
+import LoginContainer from '~/components/BoxContainer.vue';
+import FAQ from '~/components/FAQ.vue';
+import ChangeProfile from '~/components/ChangeProfile.vue';
+import HistoryTransaction from '~/components/HistoryTransaction.vue';
+import DetailHistoryTransaction from '~/components/DetailHistoryTransaction.vue';
+import noProfilePictureWasSet from '@/assets/icon/no_profile_picture_was_set.png'; // Gambar default jika tidak ada profil
+
+const {$firebase} = useNuxtApp();
+const nuxtApp = useNuxtApp();
+
+const router = useRouter();
+
+
+const isUserLoggedIn = ref(false);
+const userType = "Premium User";
+const activeComponent = ref('FAQ'); // Komponen default adalah FAQ
+const fullName = ref(''); // Nama lengkap user
+const profilePicture = ref(''); // Gambar profil user
+
+const analytics = nuxtApp.$firebase.analytics;
+const logEvent = nuxtApp.$firebase.logEvent;
+
+let startTime = Date.now(); // Untuk menyimpan waktu mulai
+const pageName = 'user-profile.vue'; // Nama halaman yang sedang dilihat
+
+// Ambil user_uid dari localStorage
+// const UserUID = localStorage.getItem('user_uid');
+
+// List komponen
+const componentsList = {
+  ChangeProfile,
+  HistoryTransaction,
+  FAQ,
+  DetailHistoryTransaction, // Tambahkan ini
+
+};
+
+// Fungsi untuk mengubah komponen yang aktif
+// const changeComponent = (componentName) => {
+//   if (componentsList[componentName]) {
+//     activeComponent.value = componentName;
+//   } else {
+//     console.error("Komponen tidak ditemukan:", componentName);
+//   }
+// };
+
+const selectedTransaction = ref(null);
+
+// Ubah fungsi changeComponent untuk menyertakan selectedTransaction
+const changeComponent = (componentName, transaction = null) => {
+  try {
+    if (componentsList[componentName]) {
+      activeComponent.value = componentName;
+      selectedTransaction.value = transaction;
+    } else {
+      const errMessage = "Komponen tidak ditemukan: " + componentName;
+      console.error(errMessage);
+
+      SharedVariables.errorReport({
+        errorReportByDev: errMessage,
+        errorReportBySystem: "Component not found",
+        errorStackReportBySystem: new Error("Component not found").stack,
+        whatPlatform: "Client",
+        whatPage: "pages/user-profile.vue",
+        whatFunction: "changeComponent",
+      });
+    }
+  } catch (error) {
+    const errMessage = "Error in changeComponent: " + error;
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/user-profile.vue",
+      whatFunction: "changeComponent",
+    });
+  }
+};
+
+
+// Fungsi untuk mengambil data user dari Firestore berdasarkan user_uid
+const fetchUserData = async () => {
+  const UserUID = localStorage.getItem('user_uid');
+
+  if (UserUID) {
+    try {
+      const userCollectionRef = $firebase.collection($firebase.db, "user");
+      const userQuery = $firebase.query(userCollectionRef, $firebase.where("user_uid", "==", UserUID));
+      const querySnapshot = await $firebase.getDocs(userQuery);
+
+      if (!querySnapshot.empty) {
+        const userData = querySnapshot.docs[0].data();
+
+        // Cek apakah userData.profile_picture adalah URL atau base64
+        const isBase64 = /^data:image\/[a-z]+;base64,/.test(userData.profile_picture);
+        const isURL = /^https?:\/\/|^www\./.test(userData.profile_picture);
+
+        if (userData.profile_picture) {
+          if (isBase64 || !isURL) {
+            profilePicture.value = `data:image/jpeg;base64,${userData.profile_picture}`;
+          } else {
+            profilePicture.value = userData.profile_picture;
+          }
+        } else {
+          profilePicture.value = noProfilePictureWasSet; // Gambar default jika tidak ada profil
+        }
+
+        // Menggabungkan first_name dan last_name
+        fullName.value = `${userData.first_name || ''} ${userData.last_name || ''}`.trim();
+      } else {
+        console.log('No such document!');
+      }
+    } catch (error) {
+      const errMessage = "Error fetching user data: " + error;
+      console.error(errMessage);
+
+      SharedVariables.errorReport({
+        errorReportByDev: errMessage,
+        errorReportBySystem: error.message,
+        errorStackReportBySystem: error.stack,
+        whatPlatform: "Client",
+        whatPage: "pages/user-profile.vue",
+        whatFunction: "fetchUserData",
+      });
+    }
+  } else {
+    const errMessage = 'No user_uid found in localStorage';
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: "user_uid missing from localStorage",
+      errorStackReportBySystem: new Error("user_uid missing from localStorage").stack,
+      whatPlatform: "Client",
+      whatPage: "pages/user-profile.vue",
+      whatFunction: "fetchUserData",
+    });
+  }
+};
+
+// Panggil fetchUserData saat komponen di-mount
+onMounted(() => {
+  try {
+    fetchUserData();
+  } catch (error) {
+    const errMessage = "Error during onMounted in user-profile.vue: " + error;
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/user-profile.vue",
+      whatFunction: "onMounted",
+    });
+  }
+});
+
+onBeforeUnmount(() => {
+  if (analytics && logEvent) {
+    const endTime = Date.now(); // Simpan waktu saat pengguna meninggalkan halaman
+    const duration = (endTime - startTime) / 1000; // Hitung durasi dalam detik
+
+    // Log event ke Firebase Analytics dengan durasi pengguna di halaman ini
+    logEvent(analytics, pageName, {
+      duration: duration // Durasi dalam detik
+    });
+  }
+});
+</script>
+
+<style scoped>
+/* Gaya CSS untuk tata letak dan tampilan */
+.profile-container {
+  background-color: #fff;
+  border-radius: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.profile-layout {
+  display: flex;
+  justify-content: space-between;
+}
+
+.sidebar {
+  width: 25%;
+  padding: 20px;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar ul li {
+  padding: 15px 0;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar ul li i {
+  margin-right: 10px;
+  color: #ff00ff;
+}
+
+.sidebar ul li:hover {
+  color: #ff00ff;
+}
+
+.user-info {
+  display: flex; /* Membuat gambar dan teks sejajar secara horizontal */
+  align-items: center; /* Vertikal sejajar */
+  margin-bottom: 20px;
+}
+
+.user-info img {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin-right: 15px; /* Memberikan jarak antara gambar dan nama */
+}
+
+.user-details h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.user-details p {
+  margin: 0;
+  font-size: 14px;
+  color: #888;
+}
+
+.content {
+  width: 70%;
+  padding: 20px;
+}
+</style>

@@ -1,0 +1,73 @@
+<template>
+  <div class="header-window">
+    <!-- Title Bar tetap selalu muncul -->
+    <TitleBar
+        @close="emitClose"
+        @maximize="emitMaximize"
+        @minimize="emitMinimize"
+    />
+
+    <!-- Navbar, hanya ditampilkan jika tidak di-minimize -->
+    <transition name="slide-up-down">
+      <Navbar v-show="!isMinimized" :activePage="activePage"/>
+    </transition>
+
+    <!-- PictureOfUs, hanya ditampilkan jika tidak di-minimize -->
+    <transition name="slide-up-down">
+      <PictureOfUs v-if="activePage !== 'Who We Are'" v-show="!isMinimized" :activePage="activePage"
+                   class="picture-of-us"/>
+    </transition>
+  </div>
+</template>
+
+<script setup>
+import TitleBar from './TitleBar.vue';
+import Navbar from './Navbar.vue';
+import PictureOfUs from './PictureOfUs.vue';
+
+const emit = defineEmits(['minimize', 'maximize', 'close']);
+
+const props = defineProps({
+  isMinimized: {
+    type: Boolean,
+    default: false
+  },
+  activePage: {
+    type: String,
+    required: true
+  }
+});
+
+const emitMinimize = () => {
+  emit('minimize');
+};
+
+const emitMaximize = () => {
+  emit('maximize');
+};
+
+const emitClose = () => {
+  emit('close');
+};
+</script>
+
+<style scoped>
+.header-window {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.picture-of-us {
+  min-width: 100vw;
+  max-height: 100vh;
+}
+
+.slide-up-down-enter-active, .slide-up-down-leave-active {
+  transition: all 0.5s ease;
+}
+
+.slide-up-down-enter-from, .slide-up-down-leave-to {
+  transform: translateY(-100%);
+}
+</style>

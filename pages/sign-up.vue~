@@ -1,0 +1,492 @@
+<template>
+  <div class="login-container" @contextmenu.prevent>
+    <SlideShowBG>
+
+      <LoginContainer :height="'50vh'" :width="'100vw'" class="box-container">
+        <NuxtLink to="/">
+          <div class="logo">
+            <img alt="Logo" src="../assets/images/logo.png"/>
+          </div>
+        </NuxtLink>
+        <p id="tagline"><b>A new era for design with just one click.</b></p>
+
+        <!-- Pesan error -->
+        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
+
+        <LoadingOverlay :isVisible="isLoading" loadingText="Processing, Please Wait..."/>
+
+        <!-- Full page overlay to disable interaction during loading -->
+        <div v-if="isLoading" class="overlay"></div>
+
+        <form v-if="!isLoading" @submit.prevent="handleRegister">
+          <div class="input-area">
+            <div id="input-fullname" class="input-container">
+              <input
+                  v-model.trim="fullname"
+                  class="centered-input"
+                  placeholder="Full Name"
+                  type="text"
+              />
+            </div>
+
+            <div id="input-email" class="input-container">
+              <input
+                  v-model.trim="email"
+                  class="centered-input"
+                  placeholder="Email Address"
+                  type="email"
+              />
+            </div>
+
+            <div id="input-password" class="input-container">
+              <div class="password-container">
+                <input
+                    v-model.trim="password"
+                    :type="passwordFieldType"
+                    class="centered-input"
+                    placeholder="Password"
+                />
+                <button class="password-toggle" type="button" @click="togglePasswordVisibility">
+                  <img
+                      :src="passwordFieldType === 'password' ? seePasswordIcon : hidePasswordIcon"
+                      alt="Toggle Visibility"/>
+                </button>
+              </div>
+            </div>
+            <div class="login-button-container">
+              <button class="login-button" type="submit">Create Account</button>
+            </div>
+          </div>
+        </form>
+      </LoginContainer>
+    </SlideShowBG>
+
+  </div>
+</template>
+<script setup>
+import {onBeforeUnmount, onMounted, ref} from 'vue';
+import {useNuxtApp} from '#app';
+import bcrypt from 'bcryptjs';
+import {useRouter} from "vue-router";
+import SlideShowBG from '~/components/SlideShowBG.vue';
+
+import LoginContainer from '~/components/BoxContainer.vue';
+import seePasswordIcon from '@/assets/icon/see_password.png';
+import hidePasswordIcon from '@/assets/icon/hide_password.png';
+
+import Shared_variables_ro from "~/config/shared_variables_ro.js";
+import SharedVariables from "~/config/shared_variables_ro.js";
+
+const nuxtApp = useNuxtApp();
+
+const fullname = ref('');
+const email = ref('');
+const password = ref('');
+const passwordFieldType = ref('password');
+const errorMessage = ref('');
+const isLoading = ref(false);
+
+const {$firebase} = useNuxtApp();
+const {$redirectIfAdminLoggedIn} = useNuxtApp()
+
+const router = useRouter();
+
+const analytics = nuxtApp.$firebase.analytics;
+const logEvent = nuxtApp.$firebase.logEvent;
+
+let startTime = Date.now(); // Untuk menyimpan waktu mulai
+const pageName = 'sign-up.vue'; // Nama halaman yang sedang dilihat
+
+onMounted(async () => {
+  try {
+    SharedVariables.compareAndHandleVersion();
+
+    // Cek apakah preRegistrationEvent bernilai true
+    if (SharedVariables.preRegistrationEvent) {
+      // Redirect ke pre-registration-event.vue
+      await router.push('/pre-registration-event');
+      return; // Hentikan eksekusi kode lebih lanjut setelah redirect
+    }
+
+    await nuxtApp.$redirectIfAdminLoggedIn();  // Panggil fungsi redirectIfLoggedIn
+  } catch (error) {
+    const errMessage = "Error in onMounted in sign-up.vue: " + error;
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/sign-up.vue",
+      whatFunction: "onMounted",
+    });
+  }
+});
+
+onBeforeUnmount(() => {
+  try {
+    if (analytics && logEvent) {
+      const endTime = Date.now(); // Simpan waktu saat pengguna meninggalkan halaman
+      const duration = (endTime - startTime) / 1000; // Hitung durasi dalam detik
+
+      // Log event ke Firebase Analytics dengan durasi pengguna di halaman ini
+      logEvent(analytics, pageName, {
+        duration: duration // Durasi dalam detik
+      });
+    }
+  } catch (error) {
+    const errMessage = "Error in onBeforeUnmount in sign-up.vue: " + error;
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/sign-up.vue",
+      whatFunction: "onBeforeUnmount",
+    });
+  }
+});
+
+const updateSilverTokenOnSignup = async (userId) => {
+  try {
+    // Ambil nilai silver token yang digunakan oleh guest dari Firestore
+    const guestUserId = localStorage.getItem('guest_user_uid');
+    const guestDocRef = $firebase.doc($firebase.db, "guest_user", guestUserId);
+    const guestDocSnap = await $firebase.getDoc(guestDocRef);
+
+    if (guestDocSnap.exists()) {
+      const guestData = guestDocSnap.data();
+      const guestUsedToken = guestData.used_silver_token || 0;
+
+      // Ambil nilai silver token dari set_token_default untuk membership
+      const membershipDocRef = $firebase.doc($firebase.db, "set_token_default", "silver_membership");
+      const membershipDocSnap = await $firebase.getDoc(membershipDocRef);
+
+      if (membershipDocSnap.exists()) {
+        const membershipData = membershipDocSnap.data();
+        const membershipTokenValue = membershipData.token || 0;
+
+        // Hitung sisa token membership yang akan diberikan
+        const silverTokenValue = membershipTokenValue - guestUsedToken;
+
+        // Update nilai silver_token di user collection
+        const userDocRef = $firebase.doc($firebase.collection($firebase.db, 'user'), userId);
+        await $firebase.updateDoc(userDocRef, {
+          silver_token: silverTokenValue
+        });
+
+        // Reset nilai silver_token di guest user
+        await $firebase.updateDoc(guestDocRef, {
+          silver_token: 0,
+          used_silver_token: 0,
+          updated_date: $firebase.Timestamp.now()
+        });
+
+        if (SharedVariables.isDevelopment) console.log('Updated silver token on sign up:', silverTokenValue);
+      }
+    }
+  } catch (error) {
+    const errMessage = "Error in updateSilverTokenOnSignup in sign-up.vue: " + error;
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/sign-up.vue",
+      whatFunction: "updateSilverTokenOnSignup",
+    });
+  }
+};
+
+const handleRegister = async () => {
+  errorMessage.value = '';
+  isLoading.value = true;
+  // Ambil UID guest dari localStorage
+  const guestUserId = localStorage.getItem('guest_user_uid');
+  if (!password.value && !email.value && !fullname.value) {
+    errorMessage.value = 'Please enter your Full Name, Email and Password.';
+    isLoading.value = false;
+  } else if (!password.value && !fullname.value) {
+    errorMessage.value = 'Please enter your Full Name and Password.';
+    isLoading.value = false;
+  } else if (!fullname.value && !email.value) {
+    errorMessage.value = 'Please enter your Full Name and Email.';
+    isLoading.value = false;
+  } else if (!password.value && !email.value) {
+    errorMessage.value = 'Please enter your Email and Password.';
+    isLoading.value = false;
+  } else if (!fullname.value) {
+    errorMessage.value = 'Please enter your Full Name.';
+    isLoading.value = false;
+  } else if (!email.value) {
+    errorMessage.value = 'Please enter your Email Address.';
+    isLoading.value = false;
+  } else if (!password.value) {
+    errorMessage.value = 'Please enter your Password.';
+    isLoading.value = false;
+  } else {
+    try {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password.value, salt);
+
+      const silverMembershipDocRef = $firebase.doc($firebase.db, "set_token_default", "silver_membership");
+      const silverMembershipDocSnap = await $firebase.getDoc(silverMembershipDocRef);
+
+      const goldMembershipDocRef = $firebase.doc($firebase.db, "set_token_default", "gold_membership");
+      const goldMembershipDocSnap = await $firebase.getDoc(goldMembershipDocRef);
+
+
+      let silverTokenValue = 20;
+      let goldTokenValue = 0;
+
+      if (silverMembershipDocSnap.exists()) {
+        silverTokenValue = silverMembershipDocSnap.data().token || silverTokenValue;
+      }
+
+      if (goldMembershipDocSnap.exists()) {
+        goldTokenValue = goldMembershipDocSnap.data().token || goldTokenValue;
+      }
+      //
+      // // Memanggil fungsi untuk mengupdate silver_token
+      // await updateSilverTokenOnSignup(guestUserId);
+
+      const userCredential = await $firebase.createUserWithEmailAndPassword($firebase.auth, email.value, password.value);
+      const user = userCredential.user;
+
+      const nameParts = fullname.value.split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ');
+
+      const currentTime = new Date();
+
+      const {$getFormattedTimestamp} = useNuxtApp();
+
+      const userUid = `${email.value}#${$getFormattedTimestamp()}`;
+
+      const userDocRef = $firebase.doc($firebase.collection($firebase.db, 'user'), user.uid);
+      await $firebase.setDoc(userDocRef, {
+        address: "",
+        city_id: "",
+        country_id: "",
+        created_date: currentTime,
+        email: email.value,
+        first_name: firstName,
+        gold_token: goldTokenValue,
+        is_admin: false,
+        last_login: currentTime,
+        last_name: lastName,
+        last_redeem_silver_token: currentTime,
+        last_redeem_gold_token: currentTime,
+        password: hashedPassword,
+        phone_number: "",
+        postal_code_id: "",
+        profile_picture: "",
+        province_id: "",
+        silver_token: silverTokenValue,
+        uid: user.uid,
+        updated_date: currentTime,
+        user_uid: userUid,
+        expired_premium_token: "",
+        premium_token: 0,
+        coin_balance: 0,
+
+      });
+
+      // Memanggil fungsi untuk mengupdate silver_token
+      await updateSilverTokenOnSignup(user.uid);
+
+      if (Shared_variables_ro.isDevelopment) {
+        console.log('User registered and saved to Firestore:', user);
+      }
+
+      localStorage.setItem('user_uid', userUid);
+      localStorage.setItem('uid', user.uid);
+
+
+      await router.push('/');
+
+
+    } catch (error) {
+      errorMessage.value = error.message;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+};
+
+const togglePasswordVisibility = () => {
+  passwordFieldType.value = passwordFieldType.value === 'password' ? 'text' : 'password';
+};
+
+</script>
+
+
+<style scoped>
+.login-container {
+  position: relative;
+  min-width: 100%;
+  min-height: 100vh;
+  //background-color: #8e117b;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10; /* Pastikan z-index tinggi agar bisa diklik */
+
+}
+
+
+.box-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  /* Sesuaikan ukuran agar tidak terlalu besar */
+  min-width: 300px; /* Ukuran minimum untuk lebar */
+  max-width: 400px; /* Ukuran maksimum untuk lebar */
+  width: 100%; /* Mengambil lebar 100% dalam batas min dan max */
+  min-height: auto; /* Menyesuaikan tinggi minimum sesuai konten */
+  max-height: 100%; /* Menghindari kotak terlalu besar */
+  z-index: 10; /* Pastikan z-index tinggi agar bisa diklik */
+
+}
+
+.logo {
+  width: 209.04px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 62px;
+  margin-left: auto;
+  margin-right: auto;
+  z-index: 10;
+}
+
+#tagline {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.input-area {
+  margin-top: 10px;
+  margin-bottom: 14px;
+}
+
+.input-container {
+  display: flex;
+  justify-content: center;
+}
+
+#input-email {
+  margin-bottom: 24px;
+}
+
+.centered-input {
+  text-align: center;
+  box-shadow: inset 0px 4px 4px #00000040;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 72px;
+  border: 1px solid #ccc;
+  border-radius: 30px;
+  display: flex;
+}
+
+.login-button-container {
+  min-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.login-button {
+  background-color: #EA0A8C;
+  color: white;
+  padding: 10px 30px;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  font-size: 1.1em;
+  gap: 10px;
+  width: 190px;
+  height: 50px;
+  margin-top: 8%;
+}
+
+.login-button:hover {
+  background-color: #e73370;
+}
+
+.password-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100%;
+  padding: 0px 72px;
+}
+
+.password-container input {
+  flex: 1;
+  margin: -10px 0px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 25%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  outline: none;
+}
+
+.password-toggle img {
+  width: 20px;
+  height: 25px;
+}
+
+.error-message {
+  color: red;
+  margin-bottom: 5px;
+  text-align: center;
+  font-size: 15px;
+}
+
+.loading-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  font-size: 18px;
+  text-align: center;
+  z-index: 9999;
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9998;
+  pointer-events: none;
+}
+</style>

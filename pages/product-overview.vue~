@@ -1,0 +1,1663 @@
+<template>
+  <div @contextmenu.prevent>
+    <!-- Navbar -->
+    <Navbar :isAdmin="false" :isLoggedIn="isUserLoggedIn"/>
+
+    <!-- Product Overview Section -->
+    <div class="product-overview-container">
+      <h1 class="page-title">PRODUCT PREVIEW</h1>
+      <div class="product-section">
+        <!-- Product Image -->
+        <div class="preview-container">
+
+          <!-- Preview Images (New Section) -->
+          <div class="showcase-image-preview-container">
+            <div class="image-preview-list">
+              <div
+                  v-for="(mockupUrl, index) in additionalMockupUrls"
+                  :key="index"
+                  class="image-preview"
+                  @click="setMainImage(mockupUrl)"
+              >
+                <img :src="mockupUrl" alt="Preview Image"/>
+              </div>
+            </div>
+
+            <div class="product-image">
+              <img :src="productImage" alt="Product Image"/>
+            </div>
+          </div>
+          <div v-if="!isNoVariant" class="variant-selection-container">
+            <div :class="{ disabled: isFirstVariant }" class="variant-selection-section" @click="previousVariant">
+              Previous Variant
+            </div>
+
+            <div :class="{ disabled: isLastVariant }" class="variant-selection-section" @click="nextVariant">
+              Next Variant
+            </div>
+          </div>
+
+          <div class="variant-selection-container">
+            <div v-if="!isNoVariant && isEnableRemoveThisVariant" class="variant-subtract-section"
+                 @click="decreaseVariant">
+              <img alt="add icon" src="@/assets/icon/subtract.png"
+                   style="width: 24px; height: 24px; object-fit: contain">
+            </div>
+
+            <div
+                v-if="!isNoVariant && isEnableRemoveThisVariant"
+                :class="{ disabled: !isEnableAddOtherVariant }"
+                class="variant-update-section"
+                @click="confirmUpdateVariant"
+            >
+              <img alt="update icon" src="@/assets/icon/update.png"
+                   style="width: 24px; height: 24px; object-fit: contain">
+            </div>
+
+            <div
+                :class="{ disabled: !isEnableAddOtherVariant }"
+                class="variant-add-section"
+                @click="increaseVariant"
+            >
+              <img alt="add icon" src="@/assets/icon/add.png" style="width: 24px; height: 24px; object-fit: contain">
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Product Details -->
+        <div class="product-details">
+          <h2 class="product-title">{{ productTitle }}</h2>
+          <!--          <div class="rating">-->
+          <!--            ⭐⭐⭐⭐☆ <span>(654)</span>-->
+          <!--          </div>-->
+          <p class="price">
+            <span class="current-price">${{ currentPrice }}</span> <span class="original-price">${{
+              originalPrice
+            }}</span>
+          </p>
+
+          <div class="product-info">
+            <div class="product-details-header-container">
+              <h3>PRODUCT DETAILS:</h3>
+
+              <button class="size-guide-btn" @click="handleSizeGuide">
+                >>> Need Size Guide? Click here <<<
+              </button>
+            </div>
+
+            <p style="width: 700px" v-html="formattedDescription"></p>
+          </div>
+
+          <div class="setup-section">
+            <div class="size-section">
+              <p>AVAILABLE SIZES:</p>
+              <select v-model="selectedSize" @change="updateProductDetails">
+                <option v-for="size in availableSizes" :key="size" :value="size">{{ size }}</option>
+              </select>
+            </div>
+
+            <!-- Quantity element -->
+            <div class="quantity-container">
+              <p>QUANTITY:</p>
+
+              <div class="quantity-section">
+                <button style="background-color: red" @click="decreaseQuantity">-</button>
+                <input
+                    v-model="quantity"
+                    min="1"
+                    style="width: 50px; text-align: center; cursor: text"
+                    type="number"
+                    @input="updateQuantity"
+                />
+                <button style="background-color: green" @click="increaseQuantity">+</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="setup-section">
+            <div class="color-section">
+              <p>COLOR:</p>
+              <div class="color-options">
+                <div
+                    v-for="(color, index) in colorOptions"
+                    :key="index"
+                    :class="{ selected: selectedColor === color.color_code }"
+                    :style="{ backgroundColor: color.color_code, position: 'relative' }"
+                    class="color"
+                    @click="selectColor(color)"
+                    @mouseleave="hideTooltip"
+                    @mouseover="showTooltip(index, color.color_name, $event)"
+                >
+                  <span v-if="selectedColor === color.color_code" class="checkmark">✔</span>
+                </div>
+              </div>
+
+              <!-- Tooltip element -->
+              <div v-if="tooltipVisible" :style="{ top: tooltipPosition.y + 'px', left: tooltipPosition.x + 'px' }"
+                   class="tooltip">
+                {{ tooltipText }}
+              </div>
+            </div>
+          </div>
+
+          <div class="product-selection">
+            <button :disabled="currentProductIndex === 0" class="change-product-btn" @click="previousProduct">Previous
+              Product
+            </button>
+            <button :disabled="currentProductIndex === productDetailsFromPrintful.length - 1" class="change-product-btn"
+                    style="background-color: #EA0A8C; color: white"
+                    @click="nextProduct">Next Product
+            </button>
+          </div>
+
+          <button class="continue-payment-btn" @click="continueToPayment">Continue to Payment</button>
+        </div>
+      </div>
+    </div>
+
+    <LoadingOverlay :isVisible="isLoading" :loadingText="loadingMessage"/>
+
+    <MacMessage
+        v-if="showRemoveConfirmation"
+        :message="'Are you sure you want to remove this variant?'"
+        :status="'warning'"
+        :title="'Confirmation'"
+        :typeWindow="'confirmation'"
+        @abortAction="abortConfirmation"
+        @close="confirmRemoveVariant"
+    />
+
+    <MacMessage
+        v-if="showUpdateConfirmation"
+        :message="'Are you sure you want to update this variant?'"
+        :status="'warning'"
+        :title="'Confirmation'"
+        :typeWindow="'confirmation'"
+        @abortAction="abortConfirmation"
+        @close="updateThisVariant"
+    />
+
+    <MacMessage
+        v-if="showErrorMessageDialog"
+        :message="errorMessage"
+        :requiredActionButton="true"
+        :status="'error'"
+        :title="'ERROR'"
+        :typeWindow="'message'"
+        @close="dismissErrorMessage"
+    />
+
+    <div v-if="showSizeGuide" class="size-guide-overlay" @click="closeSizeGuide">
+      <SizeGuide :productId="selectedProducts[currentProductIndex]?.id_printful"/>
+    </div>
+
+    <TermsAndConditions
+        :isVisible="showTerms"
+        @close="showTerms = false"
+        @confirm="proceedToPayment"
+    />
+
+    <!-- Footer -->
+    <Footer/>
+  </div>
+</template>
+
+<script setup>
+import {onBeforeUnmount, onMounted, ref, watchEffect} from 'vue';
+import {useRouter} from 'vue-router';
+import Navbar from '~/components/Navbar.vue';
+import Footer from '~/components/Footer.vue';
+import {useNuxtApp} from '#app';
+import SharedVariables from "~/config/shared_variables_ro.js";
+import MacMessage from '~/components/MacMessage.vue';
+import SizeGuide from '~/components/SizeGuide.vue'; // Adjust the path if necessary
+import LoadingOverlay from '~/components/LoadingOverlay.vue';
+import TermsAndConditions from '~/components/TermsAndConditions.vue'; // Adjust the path if needed
+
+const isUserLoggedIn = ref(false);
+const selectedProducts = ref([]); // Variabel untuk menampung data dari localStorage
+const router = useRouter();
+const nuxtApp = useNuxtApp();
+
+const productDetailsFromPrintful = ref([]); // Holds the fetched product details
+const currentProductIndex = ref(0); // Track the current product index
+
+const productImage = ref("");
+const productTitle = ref('');
+const currentPrice = ref(0);
+const originalPrice = ref(0);
+const colorOptions = ref([]);
+const availableSizes = ref([]);
+const productDescription = ref('');
+const selectedSize = ref(undefined);
+const selectedColor = ref(undefined);
+const tooltipVisible = ref(false);
+const tooltipText = ref('');
+const tooltipPosition = ref({x: 0, y: 0});
+const quantity = ref(1); // Default quantity
+const variantCount = ref(0); // Default variant count
+const selectedVariantsMap = ref(new Map()); // Map to store product variant data
+const isEnableAddOtherVariant = ref(false);
+const isEnableUpdateThisVariant = ref(false);
+const isEnableRemoveThisVariant = ref(false);
+const isNoVariant = ref(true); // Atur defaultnya menjadi true
+const isFirstVariant = ref(true); // Atur defaultnya menjadi true
+const isLastVariant = ref(true); // Atur defaultnya menjadi true
+const showRemoveConfirmation = ref(false);
+const showUpdateConfirmation = ref(false);
+const showErrorMessageDialog = ref(false);
+const errorMessage = ref("");
+const showSizeGuide = ref(false);
+const isLoading = ref(false);
+const loadingMessage = ref("Loading your product, please wait...");
+const showTerms = ref(false);
+const additionalMockupUrls = ref([]);
+
+const analytics = nuxtApp.$firebase.analytics;
+const logEvent = nuxtApp.$firebase.logEvent;
+
+let startTime = Date.now(); // Untuk menyimpan waktu mulai
+const pageName = 'product-overview.vue'; // Nama halaman yang sedang dilihat
+
+let files;
+
+watchEffect(() => {
+  console.log('Quantity Updated:', quantity.value);
+});
+
+// Method to set the main image when clicking a preview image
+const setMainImage = (url) => {
+  productImage.value = url;
+};
+
+// Method to update product details based on the current index
+const updateProductDetails = async (typeAccess) => {
+  if (SharedVariables.isDevelopment) {
+    console.log('Selected Size:', selectedSize.value);
+    console.log('Selected Color:', selectedColor.value);
+  }
+
+  if (productDetailsFromPrintful.value.length > 0) {
+    const product = productDetailsFromPrintful.value[currentProductIndex.value].result;
+
+    // Reset additionalMockupUrls setiap kali detail produk diperbarui
+    additionalMockupUrls.value = [];
+
+    if (typeAccess === 'variant') {
+      if (!selectedColor.value) {
+        productImage.value = product.product.image;
+        productTitle.value = product.product.title;
+      }
+    }
+
+    productDescription.value = product.product.description;
+
+    availableSizes.value = Object.keys(product.variants);
+
+    if (selectedSize.value) {
+      const selectedSizeVariants = product.variants[selectedSize.value];
+
+      if (selectedSizeVariants.length === 1) {
+        isEnableAddOtherVariant.value = true;
+      }
+
+      colorOptions.value = selectedSizeVariants.map(variant => ({
+        color_name: variant.color,
+        color_code: variant.color_code,
+        product_id: variant.id,
+        product_name: variant.name,
+        product_image: variant.image,
+      }));
+
+      if (!selectedColor.value && selectedSizeVariants.length === 1) {
+        selectedColor.value = selectedSizeVariants[0].color_code;
+      }
+
+      if (typeAccess === 'product') {
+        productImage.value = selectedSizeVariants[0].image;
+        productTitle.value = product.product.title;
+      }
+
+      const selectedVariant = selectedSizeVariants.find(variant => variant.color_code === selectedColor.value);
+
+      if (selectedVariant) {
+        currentPrice.value = selectedProducts.value[currentProductIndex.value].price;
+        originalPrice.value = selectedProducts.value[currentProductIndex.value].price;
+        productImage.value = selectedVariant.image;
+
+        if (selectedColor.value) {
+          try {
+            isLoading.value = true;
+            loadingMessage.value = "Rendering in progress, please wait...";
+            const fileName = localStorage.getItem('previewImage');
+            const productId = selectedProducts.value[currentProductIndex.value].id_printful;
+            const variantId = selectedVariant.id;
+
+            if (fileName && productId && variantId) {
+              const response = await fetch('https://us-central1-blanx-project.cloudfunctions.net/processMockupPreview', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  fileName: fileName,
+                  productId: productId,
+                  variantIds: [variantId],
+                }),
+              });
+
+              const result = await response.json();
+
+              if (result.success && result.taskKey) {
+                files = result.files[0];
+
+                const taskStatusResponse = await fetch(`https://us-central1-blanx-project.cloudfunctions.net/getPrintfulTaskStatus?taskKey=${result.taskKey}`);
+                const taskStatusResult = await taskStatusResponse.json();
+
+                if (taskStatusResult && taskStatusResult.mockup_urls && taskStatusResult.mockup_urls.length > 0) {
+                  productImage.value = taskStatusResult.mockup_urls[0];
+
+                  if (taskStatusResult.mockup_urls.length > 1) {
+                    additionalMockupUrls.value = taskStatusResult.mockup_urls;
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            const errMessage = "Error processing mockup preview or fetching status: " + error;
+            console.error(errMessage);
+
+            SharedVariables.errorReport({
+              errorReportByDev: errMessage,
+              errorReportBySystem: error.message,
+              errorStackReportBySystem: error.stack,
+              whatPlatform: "Client",
+              whatPage: "pages/product-overview.vue",
+              whatFunction: "updateProductDetails"
+            });
+
+            errorMessage.value = 'Unable to render the image! Please click the variant color again to re-render the image.';
+            showErrorMessageDialog.value = true;
+          } finally {
+            isLoading.value = false;
+          }
+        }
+      }
+
+    } else {
+      colorOptions.value = [];
+      currentPrice.value = 0;
+      originalPrice.value = 0;
+      selectedColor.value = '';
+    }
+  }
+};
+
+onMounted(async () => {
+  SharedVariables.compareAndHandleVersion();
+
+  // Cek apakah preRegistrationEvent bernilai true
+  if (SharedVariables.preRegistrationEvent) {
+    // Redirect ke pre-registration-event.vue
+    await router.push('/pre-registration-event');
+    return; // Hentikan eksekusi kode lebih lanjut setelah redirect
+  }
+
+  await nuxtApp.$redirectIfAdminLoggedIn();  // Panggil fungsi redirectIfLoggedIn
+
+  isUserLoggedIn.value = useNuxtApp().$checkUserUid();
+
+  isLoading.value = true;
+
+  const storedProducts = localStorage.getItem('selectedProducts');
+  if (storedProducts) {
+    try {
+      selectedProducts.value = JSON.parse(storedProducts);
+
+      for (const product of selectedProducts.value) {
+        try {
+          const response = await fetch('https://us-central1-blanx-project.cloudfunctions.net/getPrintfulProductDetails?productId=' + product.id_printful);
+          if (response.ok) {
+            const data = await response.json();
+            productDetailsFromPrintful.value.push(data);
+
+            if (SharedVariables.isDevelopment) {
+              console.log("isi data : ");
+              console.log(JSON.stringify(data));
+            }
+          }
+        } catch (error) {
+          const errMessage = 'Error fetching product details for productId: ' + product.id_printful;
+          console.error(errMessage);
+
+          SharedVariables.errorReport({
+            errorReportByDev: errMessage,
+            errorReportBySystem: error.message,
+            errorStackReportBySystem: error.stack,
+            whatPlatform: "Client",
+            whatPage: "pages/product-overview.vue",
+            whatFunction: "onMounted"
+          });
+
+          errorMessage.value = 'Failed to retrieve data! Please try again in a moment by refreshing the browser. If the issue persists, please contact BLANX Customer Support!';
+          showErrorMessageDialog.value = true;
+        }
+      }
+
+      updateProductDetails('variant');
+
+      isEnableAddOtherVariant.value = false;
+      isEnableUpdateThisVariant.value = false;
+      isEnableRemoveThisVariant.value = false;
+      isNoVariant.value = true;
+      isFirstVariant.value = true;
+      isLastVariant.value = true;
+    } catch (error) {
+      const errMessage = 'Error processing storedProducts';
+      console.error(errMessage);
+
+      SharedVariables.errorReport({
+        errorReportByDev: errMessage,
+        errorReportBySystem: error.message,
+        errorStackReportBySystem: error.stack,
+        whatPlatform: "Client",
+        whatPage: "pages/product-overview.vue",
+        whatFunction: "onMounted"
+      });
+
+      errorMessage.value = 'Failed to retrieve data! Please try again in a moment by refreshing the browser. If the issue persists, please contact BLANX Customer Support!';
+      showErrorMessageDialog.value = true;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+});
+
+onBeforeUnmount(() => {
+  try {
+    if (analytics && logEvent) {
+      const endTime = Date.now(); // Simpan waktu saat pengguna meninggalkan halaman
+      const duration = (endTime - startTime) / 1000; // Hitung durasi dalam detik
+
+      // Log event ke Firebase Analytics dengan durasi pengguna di halaman ini
+      logEvent(analytics, pageName, {
+        duration: duration // Durasi dalam detik
+      });
+    }
+  } catch (error) {
+    const errMessage = "Error logging page duration for: " + pageName;
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/product-overview.vue",
+      whatFunction: "onBeforeUnmount"
+    });
+  }
+});
+
+
+// Watchers to handle changes in size and color selections
+watch(selectedSize, () => {
+  updateProductDetails('variant');
+});
+
+const loadVariantDataByProductId = (productId) => {
+  try {
+    const variantData = selectedVariantsMap.value.get(productId) || [];
+    variantCount.value = variantData.length - 1; // Set variantCount to the total length - 1
+    return variantData;
+  } catch (error) {
+    const errMessage = "Error loading variant data for productId: " + productId;
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/product-overview.vue",
+      whatFunction: "loadVariantDataByProductId"
+    });
+  }
+};
+
+const loadLastVariant = (productId) => {
+  try {
+    const currentVariants = selectedVariantsMap.value.get(productId) || [];
+    if (currentVariants.length > 0) {
+      variantCount.value = currentVariants.length - 1; // Set to the last index
+      const lastVariant = currentVariants[variantCount.value];
+
+      checkIndex(variantCount.value)
+
+      if (lastVariant) {
+        const [size, colorCode] = lastVariant.product_variant.split('_');
+        selectedSize.value = size;
+        selectedColor.value = colorCode;
+        quantity.value = lastVariant.quantity;
+        updateProductDetails('product');
+      }
+    }
+  } catch (error) {
+    const errMessage = "Error loading last variant for productId: " + productId;
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/product-overview.vue",
+      whatFunction: "loadLastVariant"
+    });
+  }
+};
+
+const previousProduct = () => {
+  try {
+    const currentProduct = selectedProducts.value[currentProductIndex.value];
+    const variants = selectedVariantsMap.value.get(currentProduct?.id_printful) || [];
+
+    // Hitung total kuantitas dari variant yang sudah ada
+    const totalQuantity = variants.reduce((sum, variant) => sum + variant.quantity, 0);
+
+    // Jika tidak ada varian, gunakan jumlah quantity yang diinput
+    const finalTotalQuantity = totalQuantity + (variants.length === 0 ? quantity.value : 0);
+
+    // Validasi apakah total kuantitas melebihi 1000
+    if (finalTotalQuantity > 1000) {
+      errorMessage.value = 'The total quantity for this product exceeds the maximum limit of 1000. Please adjust the quantity.';
+      showErrorMessageDialog.value = true;
+      return; // Stop execution
+    }
+
+    addVariant(); // Save the current variant before moving
+    quantity.value = 1;
+
+    if (currentProductIndex.value > 0) {
+      currentProductIndex.value--;
+      const prevProductId = selectedProducts.value[currentProductIndex.value]?.id_printful;
+      const variantData = loadVariantDataByProductId(prevProductId);
+      selectedVariantsMap.value.set(prevProductId, variantData);
+
+      if (variantData.length > 0) {
+        loadLastVariant(prevProductId); // Auto-load last variant if data exists
+      } else {
+        selectedSize.value = undefined;
+        selectedColor.value = undefined;
+        updateProductDetails('variant');
+      }
+    }
+  } catch (error) {
+    const errMessage = "Error occurred while moving to previous product.";
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/product-overview.vue",
+      whatFunction: "previousProduct"
+    });
+  }
+};
+
+const nextProduct = () => {
+  try {
+    const currentProduct = selectedProducts.value[currentProductIndex.value];
+    const variants = selectedVariantsMap.value.get(currentProduct?.id_printful) || [];
+
+    // Hitung total kuantitas dari variant yang sudah ada
+    const totalQuantity = variants.reduce((sum, variant) => sum + variant.quantity, 0);
+
+    // Jika tidak ada varian, gunakan jumlah quantity yang diinput
+    const finalTotalQuantity = totalQuantity + (variants.length === 0 ? quantity.value : 0);
+
+    // Validasi apakah total kuantitas melebihi 1000
+    if (finalTotalQuantity > 1000) {
+      errorMessage.value = 'The total quantity for this product exceeds the maximum limit of 1000. Please adjust the quantity.';
+      showErrorMessageDialog.value = true;
+      return; // Stop execution
+    }
+
+    addVariant(); // Save the current variant before moving
+    quantity.value = 1;
+
+    if (currentProductIndex.value < productDetailsFromPrintful.value.length - 1) {
+      currentProductIndex.value++;
+      const nextProductId = selectedProducts.value[currentProductIndex.value]?.id_printful;
+      const variantData = loadVariantDataByProductId(nextProductId);
+      selectedVariantsMap.value.set(nextProductId, variantData);
+
+      if (variantData.length > 0) {
+        loadLastVariant(nextProductId); // Auto-load last variant if data exists
+      } else {
+        selectedSize.value = undefined;
+        selectedColor.value = undefined;
+        updateProductDetails('variant');
+      }
+    }
+  } catch (error) {
+    const errMessage = "Error occurred while moving to next product.";
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/product-overview.vue",
+      whatFunction: "nextProduct"
+    });
+  }
+};
+
+// Method to show tooltip
+const showTooltip = (index, text, event) => {
+  tooltipText.value = text;
+  tooltipVisible.value = true;
+  tooltipPosition.value = {
+    x: event.pageX + 10, // Mengatur posisi tooltip sedikit di sebelah kanan kursor
+    y: event.pageY + 10 // Mengatur posisi tooltip sedikit di bawah kursor
+  };
+};
+
+// Method to hide tooltip
+const hideTooltip = () => {
+  tooltipVisible.value = false;
+};
+
+// Adjust `selectColor` to reset data when a new color is selected
+const selectColor = (color) => {
+  selectedColor.value = color.color_code;
+  productImage.value = color.product_image;
+  productTitle.value = color.product_name;
+
+  isEnableAddOtherVariant.value = true
+
+  updateProductDetails('variant');
+};
+
+// Function to handle quantity change
+const increaseQuantity = () => {
+  quantity.value++;
+};
+
+const decreaseQuantity = () => {
+  if (quantity.value > 1) {
+    quantity.value--;
+  }
+};
+
+const resetVariant = () => {
+  selectedSize.value = '';
+  selectedColor.value = '';
+  quantity.value = 1;
+
+  updateProductDetails('variant'); // Update the product details to reflect the reset
+};
+
+const confirmUpdateVariant = () => {
+  showUpdateConfirmation.value = true; // Display the confirmation message
+};
+
+const updateThisVariant = () => {
+  showUpdateConfirmation.value = false; // Display the confirmation message
+  if (selectedSize.value) {
+    const selectedProduct = selectedProducts.value[currentProductIndex.value];
+    const productId = selectedProduct.id_printful;
+
+    // Ensure there's an entry in the map for the current product
+    if (selectedVariantsMap.value.has(productId)) {
+      const currentVariants = selectedVariantsMap.value.get(productId);
+
+      // Directly remove the variant at the current variantCount index
+      if (currentVariants.length > 0 && variantCount.value >= 0) {
+        currentVariants.splice(variantCount.value, 1);
+
+        if (SharedVariables.isDevelopment) {
+          console.log("Variant removed. Updated Variants Map:", JSON.stringify([...selectedVariantsMap.value]));
+        }
+
+        // Re-add the updated variant using logic from addVariant
+        const product = productDetailsFromPrintful.value[currentProductIndex.value].result;
+        const selectedSizeVariants = product.variants[selectedSize.value];
+
+        let selectedVariant;
+        if (selectedSizeVariants.length === 1 && selectedSizeVariants[0].color_code === null) {
+          selectedVariant = selectedSizeVariants[0];
+          selectedColor.value = "#FFF";
+        } else {
+          selectedVariant = selectedSizeVariants.find(
+              (variant) => variant.color_code === selectedColor.value
+          );
+        }
+
+        if (selectedVariant) {
+          currentVariants.push({
+            productId: selectedVariant.id,
+            product_variant: selectedSize.value + "_" + selectedColor.value,
+            quantity: quantity.value,
+          });
+
+          // Update the map with the modified array
+          selectedVariantsMap.value.set(productId, currentVariants);
+
+          if (SharedVariables.isDevelopment) {
+            console.log("Updated Variants Map after re-adding:", JSON.stringify([...selectedVariantsMap.value]));
+          }
+
+          variantCount.value = currentVariants.length - 1; // Set to the last index
+
+          checkIndex(variantCount.value)
+        }
+      }
+    }
+  }
+};
+
+const decreaseVariant = () => {
+  showRemoveConfirmation.value = true; // Tampilkan konfirmasi
+};
+
+const confirmRemoveVariant = () => {
+  try {
+    showRemoveConfirmation.value = false;
+
+    const productId = selectedProducts.value[currentProductIndex.value].id_printful;
+
+    if (selectedVariantsMap.value.has(productId)) {
+      const currentVariants = selectedVariantsMap.value.get(productId);
+
+      // Hapus data di indeks saat ini
+      if (currentVariants.length > 0 && variantCount.value >= 0) {
+        currentVariants.splice(variantCount.value, 1); // Hapus data di indeks ke variantCount - 1
+
+        if (SharedVariables.isDevelopment) {
+          console.log("Updated Variants Map 1:", JSON.stringify([...selectedVariantsMap.value]));
+        }
+
+        // Adjust variantCount ke varian sebelumnya
+        variantCount.value = Math.max(1, variantCount.value);
+
+        if (SharedVariables.isDevelopment) {
+          console.log("Updated Variants Map 2:", JSON.stringify([...selectedVariantsMap.value]));
+        }
+
+        // Update map dengan array yang telah diubah
+        selectedVariantsMap.value.set(productId, currentVariants);
+
+        if (SharedVariables.isDevelopment) {
+          console.log("Updated Variants Map 3:", JSON.stringify([...selectedVariantsMap.value]));
+        }
+
+        // Tampilkan varian sebelumnya setelah penghapusan
+        if (variantCount.value > currentVariants.length) {
+          variantCount.value = currentVariants.length;
+        }
+
+        variantCount.value -= 1;
+
+        // Update UI
+        const previousVariant = currentVariants[variantCount.value];
+        if (previousVariant) {
+          const [size, colorCode] = previousVariant.product_variant.split('_');
+          selectedSize.value = size;
+          selectedColor.value = colorCode;
+          quantity.value = previousVariant.quantity;
+          updateProductDetails('variant');
+        }
+
+        // Eksekusi fungsi checkIndex
+        checkIndex("update");
+      }
+    }
+  } catch (error) {
+    const errMessage = "Error occurred while removing variant.";
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/product-overview.vue",
+      whatFunction: "confirmRemoveVariant"
+    });
+  }
+};
+
+const abortConfirmation = () => {
+  showRemoveConfirmation.value = false; // Sembunyikan konfirmasi
+  showUpdateConfirmation.value = false; // Sembunyikan konfirmasi
+};
+
+
+const increaseVariant = () => {
+  addVariant(); // Call existing addVariant function to add the new variant
+
+  isEnableAddOtherVariant.value = false;
+  isEnableUpdateThisVariant.value = false;
+  isEnableRemoveThisVariant.value = false;
+  isNoVariant.value = false;
+  isFirstVariant.value = false;
+  isLastVariant.value = true;
+
+  // Reset variant
+  resetVariant();
+};
+
+// Function to add the current variant to the map
+const addVariant = () => {
+  try {
+    if (selectedSize.value) {
+      const selectedProduct = selectedProducts.value[currentProductIndex.value];
+      const productId = selectedProduct.id_printful;
+
+      // Ensure there's an entry in the map for the current product
+      if (!selectedVariantsMap.value.has(productId)) {
+        selectedVariantsMap.value.set(productId, []);
+      }
+
+      const currentVariants = selectedVariantsMap.value.get(productId);
+      const product = productDetailsFromPrintful.value[currentProductIndex.value].result;
+      const selectedSizeVariants = product.variants[selectedSize.value];
+
+      // Validasi jika color_code adalah null
+      let selectedVariant;
+      if (selectedSizeVariants.length === 1 && selectedSizeVariants[0].color_code === null) {
+        selectedVariant = selectedSizeVariants[0]; // Jika color_code null, ambil varian pertama
+        selectedColor.value = "#FFF"; // Set warna menjadi putih
+      } else {
+        selectedVariant = selectedSizeVariants.find(
+            (variant) => variant.color_code === selectedColor.value
+        );
+      }
+
+      if (!selectedVariant) return;
+
+      // Calculate total quantity for the product (before adding the new variant)
+      const totalQuantityBefore = currentVariants.reduce((sum, variant) => sum + variant.quantity, 0);
+      const newTotalQuantity = totalQuantityBefore + quantity.value;
+
+      // Check if the total quantity exceeds the limit
+      if (newTotalQuantity > 1000) {
+        // Jika total kuantitas lebih dari 1000, lempar error dan hentikan proses
+        errorMessage.value = 'The total quantity for this product exceeds the maximum limit of 1000. Please adjust the quantity.';
+        showErrorMessageDialog.value = true;
+        return; // Stop the function if the validation fails
+      }
+
+      // Check if the current variant already exists in the map
+      const existingVariant = currentVariants.find(variant => variant.productId === selectedVariant.id);
+
+      if (existingVariant) {
+        // Jika varian sudah ada, lakukan pembaruan pada quantity saja
+        existingVariant.quantity += quantity.value;
+
+        if (SharedVariables.isDevelopment) {
+          console.log("Updated existing variant:", JSON.stringify(existingVariant));
+        }
+      } else {
+        // If variant does not exist, proceed with adding it
+        currentVariants.push({
+          productId: selectedVariant.id,
+          product_variant: selectedSize.value + "_" + selectedColor.value,
+          product_size: selectedSize.value, // Tambahkan atribut product_size
+          product_color: colorOptions.value.find(color => color.color_code === selectedColor.value)?.color_name || 'Unknown', // Tambahkan atribut product_color dengan teks warna
+          quantity: quantity.value,
+          price: currentPrice.value, // Tambahkan harga dari currentPrice.value
+          mockup_url: additionalMockupUrls.value.length > 0 ? additionalMockupUrls.value[0] : productImage.value, // Set mockup_url dari additionalMockupUrls.value
+          files: files,
+        });
+
+        if (SharedVariables.isDevelopment) {
+          console.log("New variant added:", JSON.stringify([...selectedVariantsMap.value]));
+        }
+      }
+
+      // Update the map with the modified array
+      selectedVariantsMap.value.set(productId, currentVariants);
+
+      variantCount.value = selectedVariantsMap.value.get(productId).length; // Update the variant count
+    }
+  } catch (error) {
+    const errMessage = "Error occurred while adding variant.";
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/product-overview.vue",
+      whatFunction: "addVariant"
+    });
+  }
+};
+
+const previousVariant = () => {
+  try {
+    const productId = selectedProducts.value[currentProductIndex.value]?.id_printful;
+    const currentVariants = selectedVariantsMap.value.get(productId) || [];
+
+    if (currentVariants.length > 0 && variantCount.value > 0) {
+      variantCount.value -= 1;
+
+      if (variantCount.value < 0) {
+        variantCount.value = 0;
+      }
+
+      checkIndex(variantCount.value);
+
+      const previousVariant = currentVariants[variantCount.value];
+      if (previousVariant) {
+        const [size, colorCode] = previousVariant.product_variant.split('_');
+        selectedSize.value = size;
+        selectedColor.value = colorCode;
+        quantity.value = previousVariant.quantity;
+        updateProductDetails('variant');
+      }
+    }
+  } catch (error) {
+    const errMessage = "Error occurred while navigating to the previous variant.";
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/product-overview.vue",
+      whatFunction: "previousVariant"
+    });
+  }
+};
+
+const nextVariant = () => {
+  try {
+    const productId = selectedProducts.value[currentProductIndex.value]?.id_printful;
+    const currentVariants = selectedVariantsMap.value.get(productId) || [];
+
+    if (variantCount.value < currentVariants.length - 1) {
+      variantCount.value += 1;
+      checkIndex(variantCount.value);
+
+      const nextVariant = currentVariants[variantCount.value];
+      if (nextVariant) {
+        const [size, colorCode] = nextVariant.product_variant.split('_');
+        selectedSize.value = size;
+        selectedColor.value = colorCode;
+        quantity.value = nextVariant.quantity;
+        updateProductDetails('variant');
+      } else {
+        isEnableAddOtherVariant.value = false;
+        isEnableUpdateThisVariant.value = false;
+        isEnableRemoveThisVariant.value = false;
+        isNoVariant.value = false;
+        isFirstVariant.value = false;
+        isLastVariant.value = true;
+        resetVariant();
+      }
+    } else {
+      isEnableAddOtherVariant.value = false;
+      isEnableUpdateThisVariant.value = false;
+      isEnableRemoveThisVariant.value = false;
+      isNoVariant.value = false;
+      isFirstVariant.value = false;
+      isLastVariant.value = true;
+      resetVariant();
+    }
+  } catch (error) {
+    const errMessage = "Error navigating to the next variant: " + error;
+
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/product-overview.vue",
+      whatFunction: "nextVariant"
+    });
+  }
+};
+
+
+const checkIndex = (currentIndex) => {
+  try {
+    // Jika index sekarang adalah yang pertama
+    if (currentIndex === 0) {
+      isEnableAddOtherVariant.value = true;
+      isEnableUpdateThisVariant.value = true;
+      isEnableRemoveThisVariant.value = true;
+      isNoVariant.value = false;
+      isFirstVariant.value = true;
+      isLastVariant.value = false;
+
+      return;
+    }
+    // Jika index sekarang adalah yang terakhir
+    if (currentIndex === selectedVariantsMap.value.get(selectedProducts.value[currentProductIndex.value].id_printful).length - 1) {
+      isEnableAddOtherVariant.value = true;
+      isEnableUpdateThisVariant.value = true;
+      isEnableRemoveThisVariant.value = true;
+      isNoVariant.value = false;
+      isFirstVariant.value = false;
+      isLastVariant.value = true;
+
+      return;
+    }
+    // Jika index berada di tengah
+    isEnableAddOtherVariant.value = true;
+    isEnableUpdateThisVariant.value = true;
+    isEnableRemoveThisVariant.value = true;
+    isNoVariant.value = false;
+    isFirstVariant.value = false;
+    isLastVariant.value = false;
+  } catch (error) {
+    const errMessage = "Error in checkIndex function: " + error;
+
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/product-overview.vue",
+      whatFunction: "checkIndex"
+    });
+  }
+};
+
+// Handle the action for "Continue to Payment"
+const continueToPayment = () => {
+  try {
+    const currentProduct = selectedProducts.value[currentProductIndex.value];
+    const variants = selectedVariantsMap.value.get(currentProduct?.id_printful) || [];
+
+    // Hitung total kuantitas dari variant yang sudah ada
+    const totalQuantity = variants.reduce((sum, variant) => sum + variant.quantity, 0);
+
+    // Jika tidak ada varian, gunakan jumlah quantity yang diinput
+    const finalTotalQuantity = totalQuantity + (variants.length === 0 ? quantity.value : 0);
+
+    // Validasi apakah total kuantitas melebihi 1000
+    if (finalTotalQuantity > 1000) {
+      errorMessage.value = 'The total quantity for this product exceeds the maximum limit of 1000. Please adjust the quantity.';
+      showErrorMessageDialog.value = true;
+      return; // Stop execution
+    }
+
+    addVariant(); // Ensure the last variant is saved before proceeding
+    showTerms.value = true; // Show the Terms and Conditions popup
+  } catch (error) {
+    const errMessage = "Error in continueToPayment function: " + error;
+
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/product-overview.vue",
+      whatFunction: "continueToPayment"
+    });
+  }
+};
+
+// Function to proceed after accepting terms
+const proceedToPayment = () => {
+  try {
+    showTerms.value = false;
+
+    if (SharedVariables.isDevelopment) console.log("Final Variants Map before payment:", JSON.stringify([...selectedVariantsMap.value]));
+
+    // Check if selectedVariantsMap is empty
+    if (selectedVariantsMap.value.size === 0) {
+      errorMessage.value = 'No product variant data has been saved! Please fill in the product variant data first before proceeding with the payment.';
+      showErrorMessageDialog.value = true;
+      return;
+    }
+
+    // Validation to check for product IDs with no variants
+    selectedVariantsMap.value.forEach((variants, productId) => {
+      if (variants.length === 0) {
+        // Remove the product ID with no variants
+        selectedVariantsMap.value.delete(productId);
+
+        if (SharedVariables.isDevelopment) {
+          console.log(`Product with ID ${productId} has no variants and has been removed.`);
+        }
+      }
+    });
+
+    // Convert selectedVariantsMap to Base64
+    const variantsString = JSON.stringify([...selectedVariantsMap.value]);
+    const variantsBase64 = btoa(variantsString); // Encode to Base64
+
+    // Save to local storage
+    localStorage.setItem('product-container', variantsBase64);
+
+    // Redirect to the payment page
+    router.push('/product-payment');
+
+  } catch (error) {
+    const errMessage = "Error in proceedToPayment function: " + error;
+
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/product-overview.vue",
+      whatFunction: "proceedToPayment"
+    });
+  }
+};
+
+const formattedDescription = computed(() => {
+  try {
+    return productDescription.value.replaceAll('\n', '<br>');
+  } catch (error) {
+    const errMessage = "Error in formattedDescription computed property: " + error;
+
+    console.error(errMessage);
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/product-overview.vue",
+      whatFunction: "formattedDescription"
+    });
+
+    return ''; // Mengembalikan string kosong jika terjadi error
+  }
+});
+
+const updateQuantity = () => {
+  // Ensure quantity is at least 1
+  if (quantity.value < 1) {
+    quantity.value = 1;
+  }
+
+  if (SharedVariables.isDevelopment) console.log("isi dari quantity: " + quantity.value);
+};
+
+const dismissErrorMessage = () => {
+  showErrorMessageDialog.value = false
+}
+
+const handleSizeGuide = () => {
+  showSizeGuide.value = true; // Set to true when the size guide button is clicked
+};
+
+// Add this method
+const closeSizeGuide = () => {
+  showSizeGuide.value = false;
+};
+</script>
+
+<style scoped>
+.product-overview-container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #f8f9fa;
+  font-family: "Inter", Helvetica;
+}
+
+.page-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.product-section {
+  display: flex;
+  gap: 30px;
+  max-width: 1200px;
+  justify-content: center;
+}
+
+.product-image {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.product-image img {
+  width: 100vw;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+}
+
+.image-options {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.image-options button {
+  background-color: #000;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  border: none;
+}
+
+.note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: red;
+}
+
+.note span {
+  color: red;
+  font-weight: bold;
+}
+
+.product-details {
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1); /* Tambahkan shadow */
+}
+
+.product-selection {
+  display: flex;
+  flex-direction: row;
+  gap: 14px;
+}
+
+.product-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.rating span {
+  font-size: 0.9rem;
+  margin-left: 5px;
+  color: gray;
+}
+
+.price {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.current-price {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #41b883;
+}
+
+.original-price {
+  font-size: 1.2rem;
+  color: gray;
+  text-decoration: line-through;
+  margin-left: 10px;
+}
+
+.color-section, .size-section {
+  margin-top: 20px;
+}
+
+.color-section p, .size-section p {
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.color-section {
+  margin-top: 20px;
+}
+
+.color-options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap; /* Memungkinkan lingkaran warna untuk dibungkus ke baris berikutnya jika tidak cukup ruang */
+}
+
+.color {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid black; /* Border default transparan */
+  transition: border 0.3s; /* Efek transisi saat dipilih */
+}
+
+.color.selected {
+  border: 2px solid #000; /* Border berubah saat warna dipilih */
+}
+
+.color:hover {
+  border: 2px solid #aaa; /* Border berubah saat warna di-hover */
+}
+
+.product-info {
+  margin-top: 20px;
+}
+
+.product-details-header-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.size-guide-btn {
+  color: #29ABE1;
+  text-decoration: underline;
+}
+
+.product-info h3 {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.product-info ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.product-info ul li {
+  margin-top: 5px;
+}
+
+.view-less {
+  display: block;
+  margin-top: 10px;
+  color: #41b883;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.change-product-btn, .continue-payment-btn {
+  background-color: #41b883;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.change-product-btn {
+  background-color: white;
+  color: black;
+  border: 1px solid #D9D9D9;
+}
+
+.continue-payment-btn {
+  background-color: #29ABE1;
+}
+
+.change-product-btn:disabled {
+  background-color: #e0e0e0 !important; /* Light gray background */
+  color: #a0a0a0 !important;; /* Gray text */
+  cursor: not-allowed; /* Change cursor to indicate non-clickable */
+  border-color: #c0c0c0 !important;; /* Adjust border color */
+}
+
+select {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.tooltip {
+  position: absolute;
+  background-color: #333;
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none; /* Supaya tooltip tidak menghalangi elemen lain */
+  z-index: 1000;
+  white-space: nowrap;
+}
+
+.quantity-section, .variant-section {
+  display: flex;
+  align-items: center;
+  margin-left: 10px; /* Adjust as needed */
+}
+
+.quantity-section button, .variant-section button {
+  padding: 5px 10px;
+  background-color: #41b883;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.quantity-section span, .variant-section span {
+  margin: 0 10px;
+  font-size: 16px;
+}
+
+/* Add this style */
+.setup-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px; /* Adjust margin if needed */
+  width: 100%; /* Ensure it stretches across the product-details container */
+}
+
+/* This class will ensure elements are aligned to the right */
+.justify-end {
+  justify-content: flex-end;
+}
+
+.quantity-section, .variant-section {
+  display: flex;
+  align-items: center;
+  margin-left: 10px; /* Adjust as needed */
+}
+
+.quantity-section button, .variant-section button {
+  padding: 5px 10px;
+  background-color: #41b883;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.quantity-section span, .variant-section span {
+  margin: 0 10px;
+  font-size: 16px;
+}
+
+.quantity-container {
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.variant-selection-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.variant-selection-section {
+  width: 100%;
+  height: 50px;
+  margin-top: 2vh;
+  border: 2px solid #02a64f;
+  border-radius: 15px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.variant-selection-section.disabled {
+  pointer-events: none;
+  background-color: #e0e0e0; /* Light gray */
+  color: #a0a0a0; /* Gray text */
+  border-color: #c0c0c0; /* Adjust border color */
+  cursor: not-allowed;
+}
+
+.variant-subtract-section {
+  width: 100%;
+  height: 50px;
+  margin-top: 2vh;
+  background-color: red;
+  color: white;
+  border-radius: 15px;
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.variant-update-section {
+  width: 100%;
+  height: 50px;
+  margin-top: 2vh;
+  background-color: #B0B000;
+  color: white;
+  border-radius: 15px;
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.variant-add-section {
+  width: 100%;
+  height: 50px;
+  margin-top: 2vh;
+  background-color: #02a64f;
+  color: white;
+  border-radius: 15px;
+  display: flex;
+  flex-direction: row;
+  gap: 15px;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+
+.variant-add-section.disabled {
+  pointer-events: none;
+  background-color: #e0e0e0; /* Light gray */
+  color: #a0a0a0; /* Gray text */
+  cursor: not-allowed;
+}
+
+.variant-update-section.disabled {
+  pointer-events: none;
+  background-color: #e0e0e0; /* Light gray */
+  color: #a0a0a0; /* Gray text */
+  cursor: not-allowed;
+}
+
+.checkmark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white; /* You can change this to any color you prefer */
+  font-size: 16px; /* Adjust the size as needed */
+  pointer-events: none; /* Prevent the checkmark from interfering with clicks */
+  text-shadow: 0 0 5px #000, 0 0 5px #000;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.size-guide-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
+.showcase-image-preview-container {
+  display: flex;
+  flex-direction: row;
+}
+
+.image-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.image-preview {
+  width: 60px;
+  height: 60px;
+  border: 2px solid #ddd;
+  cursor: pointer;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 5px;
+}
+
+.image-preview:hover {
+  border-color: #29ABE1;
+}
+
+</style>

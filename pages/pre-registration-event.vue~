@@ -1,0 +1,407 @@
+<template>
+  <div class="desktop" @contextmenu.prevent>
+    <!-- Video Intro -->
+    <div :class="{ fadeOut: !showVideo }" class="video-container">
+      <video autoplay class="intro-video" muted playsinline @ended="onVideoEnded">
+        <source src="../assets/videos/blanx_intro_4k.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+    </div>
+
+    <!-- Layer untuk background ambient light -->
+    <div v-show="!showVideo" class="ambient-background"></div>
+
+    <!-- Konten utama dengan efek fade -->
+    <div v-show="!showVideo" :class="['overlap-group-wrapper', { 'fade-in-active': fadeIn }]">
+      <div class="content-group">
+
+        <!-- Custom Image Slideshow -->
+        <div class="slideshow">
+          <img :src="currentImage" alt="Sample intro image" class="slideshow-image"/>
+        </div>
+
+        <!-- Existing Content -->
+        <img alt="Just logo blanx" class="just-logo-blanx" src="@/assets/images/logo.png"/>
+
+        <p class="fill-in-the-or-fill">
+          <span class="text-wrapper">Fill in the ____</span>
+          <span class="text-wrapper">.</span>
+        </p>
+
+        <p class="fill-in-the-BLANX">
+          Fill in the BLANX with your imagination.&nbsp;&nbsp;
+          <br/>
+          Empower your creativity with innovative tools and bring your ideas to life. <br/>
+          Earn rewards and profit from your creations!
+        </p>
+
+        <a class="get-started" href="https://docs.google.com/forms/d/1WK00ERjHvzaGlhHaIvitkb8JbnfQ2I5xyLylTXlKobw/"
+           target="_blank">
+          <div class="join-waitlist">Join the Waitlist Now</div>
+        </a>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import {onBeforeUnmount, ref} from 'vue';
+
+import sample_intro_0 from '@/assets/images/sample_intro/sample_intro_0.jpeg';
+import sample_intro_1 from '@/assets/images/sample_intro/sample_intro_1.jpeg';
+import sample_intro_2 from '@/assets/images/sample_intro/sample_intro_2.jpeg';
+import sample_intro_3 from '@/assets/images/sample_intro/sample_intro_3.jpeg';
+import sample_intro_5 from '@/assets/images/sample_intro/sample_intro_5.jpeg';
+import sample_intro_6 from '@/assets/images/sample_intro/sample_intro_6.jpg';
+import sample_intro_7 from '@/assets/images/sample_intro/sample_intro_7.jpg';
+import sample_intro_8 from '@/assets/images/sample_intro/sample_intro_8.jpg';
+import sample_intro_9 from '@/assets/images/sample_intro/sample_intro_9.jpg';
+import sample_intro_10 from '@/assets/images/sample_intro/sample_intro_10.jpg';
+import sample_intro_11 from '@/assets/images/sample_intro/sample_intro_11.jpg';
+import sample_intro_12 from '@/assets/images/sample_intro/sample_intro_12.jpg';
+import sample_intro_13 from '@/assets/images/sample_intro/sample_intro_13.jpeg';
+import SharedVariables from "~/config/shared_variables_ro.js";
+import {useNuxtApp} from "#app";
+
+const nuxtApp = useNuxtApp();
+
+const showVideo = ref(true);  // Menampilkan video terlebih dahulu
+const fadeIn = ref(false);    // Kontrol untuk fade-in konten
+const currentImage = ref(""); // Untuk gambar saat ini yang akan ditampilkan
+
+const analytics = nuxtApp.$firebase.analytics;
+const logEvent = nuxtApp.$firebase.logEvent;
+
+let startTime = Date.now(); // Untuk menyimpan waktu mulai
+const pageName = 'pre-registration-event.vue'; // Nama halaman yang sedang dilihat
+
+// Array of image paths for slideshow
+const images = [
+  sample_intro_0,
+  sample_intro_1,
+  sample_intro_2,
+  sample_intro_3,
+  sample_intro_5,
+  sample_intro_6,
+  sample_intro_7,
+  sample_intro_8,
+  sample_intro_9,
+  sample_intro_10,
+  sample_intro_11,
+  sample_intro_12,
+  sample_intro_13,
+];
+
+let currentIndex = 0;
+let intervalId;
+
+// Function to change image every 500 ms
+const changeImage = () => {
+  try {
+    currentIndex = (currentIndex + 1) % images.length;
+    currentImage.value = images[currentIndex];
+  } catch (error) {
+    if (SharedVariables.isDevelopment) console.error("Error in changeImage:", error);
+
+    const errMessage = "Error changing image";
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/pre-registration-event.vue",
+      whatFunction: "changeImage"
+    });
+  }
+};
+
+// Saat mounted, mulai interval dan update gambar setiap 500ms
+onMounted(async () => {
+  try {
+    SharedVariables.compareAndHandleVersion();
+    await nuxtApp.$redirectIfAdminLoggedIn();  // Panggil fungsi redirectIfLoggedIn
+
+    SharedVariables.clearEncryptedData();
+
+    currentImage.value = images[currentIndex];
+    intervalId = setInterval(changeImage, 500); // Mengubah gambar setiap 500 ms
+  } catch (error) {
+    if (SharedVariables.isDevelopment) console.error("Error in onMounted:", error);
+
+    const errMessage = "Error during onMounted in pre-registration-event";
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/pre-registration-event.vue",
+      whatFunction: "onMounted"
+    });
+  }
+});
+
+onBeforeUnmount(() => {
+  try {
+    if (analytics && logEvent) {
+      const endTime = Date.now(); // Simpan waktu saat pengguna meninggalkan halaman
+      const duration = (endTime - startTime) / 1000; // Hitung durasi dalam detik
+
+      // Log event ke Firebase Analytics dengan durasi pengguna di halaman ini
+      logEvent(analytics, pageName, {
+        duration: duration // Durasi dalam detik
+      });
+    }
+  } catch (error) {
+    if (SharedVariables.isDevelopment) console.error("Error in onBeforeUnmount:", error);
+
+    const errMessage = "Error during onBeforeUnmount in pre-registration-event";
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/pre-registration-event.vue",
+      whatFunction: "onBeforeUnmount"
+    });
+  }
+});
+
+// Hentikan interval ketika komponen di-unmount
+onUnmounted(() => {
+  try {
+    clearInterval(intervalId);
+  } catch (error) {
+    if (SharedVariables.isDevelopment) console.error("Error in onUnmounted:", error);
+
+    const errMessage = "Error during onUnmounted in pre-registration-event";
+
+    SharedVariables.errorReport({
+      errorReportByDev: errMessage,
+      errorReportBySystem: error.message,
+      errorStackReportBySystem: error.stack,
+      whatPlatform: "Client",
+      whatPage: "pages/pre-registration-event.vue",
+      whatFunction: "onUnmounted"
+    });
+  }
+});
+
+const onVideoEnded = () => {
+  setTimeout(() => {
+    showVideo.value = false;  // Setelah video selesai, sembunyikan video
+    setTimeout(() => {
+      fadeIn.value = true;  // Tambahkan kelas fade-in aktif setelah video selesai
+    }, 300);  // Jeda untuk menambahkan kelas fade-in aktif
+  }, 300);
+};
+</script>
+
+<style>
+/* Animasi untuk background */
+@keyframes ambientLight {
+  0% {
+    background-color: #000000; /* Mulai dari warna hitam */
+  }
+  25% {
+    background-color: #febe16;
+  }
+  50% {
+    background-color: #02a64f;
+  }
+  75% {
+    background-color: #29abe1;
+  }
+  100% {
+    background-color: #ea0a8c;
+  }
+}
+
+.desktop {
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* Layer untuk background ambient light */
+.ambient-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  animation: ambientLight 15s infinite alternate; /* Menggunakan 'alternate' untuk mundur */
+  z-index: 0;
+  filter: brightness(0.4);
+}
+
+.overlap-group-wrapper {
+  min-height: 100vh;
+  min-width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+  opacity: 0; /* Mulai dengan opacity 0 */
+  transition: opacity 1s ease; /* Efek fade-in */
+}
+
+.fade-in-active {
+  opacity: 1; /* Set opacity ke 1 saat fade-in aktif */
+}
+
+.content-group {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  z-index: 2;
+}
+
+.fill-in-the-or-fill {
+  color: #ffffff;
+  font-family: "Inter", Helvetica;
+  font-size: 64px;
+  font-weight: 700;
+  margin-bottom: 50px;
+}
+
+.text-wrapper {
+  color: #ffffff;
+  font-family: "Inter", Helvetica;
+  font-size: 64px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.span {
+  text-decoration: underline;
+}
+
+.fill-in-the-BLANX {
+  color: #ffffff;
+  font-family: "Inter", Helvetica;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 63px;
+}
+
+.just-logo-blanx {
+  height: 137px;
+  object-fit: cover;
+  margin-bottom: 100px;
+}
+
+.get-started {
+  background-color: #ea0a8c;
+  border-radius: 50px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 18px 43px;
+  width: fit-content;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.get-started:hover {
+  background-color: #c40876;
+}
+
+.join-waitlist {
+  color: #f9f9f9;
+  font-family: "Inter", Helvetica;
+  font-size: 30px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Styling untuk fade in efek pada video */
+.video-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  //z-index: 1000;
+  transition: opacity 1s ease; /* Menambahkan transisi fade */
+  opacity: 1;
+}
+
+.video-container.fadeOut {
+  opacity: 0; /* Transisi video menghilang */
+}
+
+/* Video Intro Styling */
+.slideshow {
+  position: absolute;
+  max-width: 100px;
+  max-height: 100px;
+  top: 42vh;
+  right: 42.5vw;
+  z-index: 100;
+}
+
+/* For screens with a width less than or equal to 3840 px*2160px */
+@media screen and (max-width: 3840px) and (max-height: 2160px) {
+  .slideshow {
+    top: 45vh;
+    right: 45vw;
+  }
+}
+
+/* For screens with a width less than or equal to 2560 px*1440px */
+@media screen and (max-width: 2560px) and (max-height: 1440px) {
+  .slideshow {
+    top: 42vh;
+    right: 42.5vw;
+  }
+}
+
+/* For screens with a width less than or equal to 1920px*1080px */
+@media screen and (max-width: 1920px) and (max-height: 1080px) {
+  .slideshow {
+    top: 40vh;
+    right: 40vw;
+  }
+}
+
+/* For screens with a width less than or equal to 1366px*768px */
+@media screen and (max-width: 1366px) and (max-height: 768px) {
+  .slideshow {
+    top: 36vh;
+    right: 36vw;
+  }
+}
+
+/* For screens with a width less than or equal to 1440px*900px - MacBook M1 Pro */
+@media screen and (max-width: 1440px) and (max-height: 900px) {
+  .slideshow {
+    top: 38vh;
+    right: 37vw;
+  }
+}
+
+.intro-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.slideshow-image {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 10px;
+}
+</style>
