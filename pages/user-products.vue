@@ -17,7 +17,9 @@
         <table class="min-w-full border-collapse">
           <thead>
           <tr class="bg-indigo-600 text-white">
+<!--
             <th class="px-6 py-3 text-left">Product ID</th>
+-->
             <th class="px-6 py-3 text-left">Name</th>
             <th class="px-6 py-3 text-left">Price</th>
             <th class="px-6 py-3 text-left">Stock</th>
@@ -27,15 +29,14 @@
           <tbody>
           <tr v-for="product in filteredProducts" :key="product.id" class="border-b hover:bg-gray-100 transition">
 <!--
-            <td class="px-6 py-3">{{ product.id }}</td>
--->
+            <td class="px-6 py-3">{{ product.id }}</td>-->
             <td class="px-6 py-3">{{ product.name }}</td>
             <td class="px-6 py-3 font-bold">${{ product.price }}</td>
             <td class="px-6 py-3">{{ product.stock }}</td>
             <td class="px-6 py-3">
               <button @click="addToCart(product)" class="btn-add">
                 🛒 Add to Cart
-              </button>u
+              </button>
             </td>
           </tr>
           </tbody>
